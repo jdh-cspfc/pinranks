@@ -1,0 +1,28 @@
+{
+  "name": "react-tailwind-firebase-template",
+  "version": "0.0.1",
+  "scripts": {
+    "dev": "vite --host",
+    "build": "vite build",
+    "preview": "vite preview",
+    "setup-images": "node scripts/setup.js",
+    "download-images": "node scripts/downloadImages.js",
+    "download-images:dry-run": "node scripts/downloadImages.js --dry-run",
+    "download-lcd": "node scripts/downloadImages.js --priority=lcd",
+    "download-dmd": "node scripts/downloadImages.js --priority=dmd",
+    "download-modern": "node scripts/downloadImages.js --priority=modern",
+    "check-images": "node scripts/checkImages.js"
+  },
+  "dependencies": {
+    "axios": "^1.11.0",
+    "firebase": "^10.0.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "devDependencies": {
+    "autoprefixer": "^10.4.0",
+    "postcss": "^8.4.0",
+    "tailwindcss": "^3.0.0",
+    "vite": "^4.0.0"
+  }
+}
