@@ -33,7 +33,7 @@ async function downloadAndStoreImage(imageUrl, fileName) {
     if (exists) {
       console.log(`Image already exists: ${fileName}, skipping download`);
 
-      // Try to get the existing URL, but don't fail if we can't
+      // Try to get signed URL first
       try {
         const [url] = await file.getSignedUrl({
           action: "read",
@@ -42,8 +42,9 @@ async function downloadAndStoreImage(imageUrl, fileName) {
         return {url, action: "skipped"};
       } catch (error) {
         console.log(
-            `Could not get signed URL for ${fileName}, but image exists`,
+            `Could not get signed URL for ${fileName}: ${error.message}`,
         );
+        // Fallback to OPDB URL if we can't get signed URL
         return {url: null, action: "skipped"};
       }
     }
@@ -72,20 +73,17 @@ async function downloadAndStoreImage(imageUrl, fileName) {
       },
     });
 
-    // Get the public URL
+    // Try to get signed URL
     try {
       const [url] = await file.getSignedUrl({
         action: "read",
-        expires: "03-01-2500", // Far future expiration
+        expires: "03-01-2500",
       });
-
       console.log(`Successfully stored image: ${fileName}`);
       return {url, action: "downloaded"};
     } catch (error) {
-      console.log(
-          `Successfully stored image: ${fileName}, ` +
-          `but could not get signed URL`,
-      );
+      console.log(`Could not get signed URL for ${fileName}: ${error.message}`);
+      // Fallback to OPDB URL if we can't get signed URL
       return {url: null, action: "downloaded"};
     }
   } catch (error) {
@@ -178,13 +176,17 @@ exports.getImageUrl = functions.https.onRequest(async (req, res) => {
     const [exists] = await file.exists();
 
     if (exists) {
-      // Get signed URL
-      const [url] = await file.getSignedUrl({
-        action: "read",
-        expires: "03-01-2500",
-      });
-
-      res.json({url});
+      // Try to get signed URL
+      try {
+        const [url] = await file.getSignedUrl({
+          action: "read",
+          expires: "03-01-2500",
+        });
+        res.json({url});
+      } catch (error) {
+        console.log(`Could not get signed URL: ${error.message}`);
+        res.status(500).json({error: "Failed to generate image URL"});
+      }
     } else {
       res.status(404).json({error: "Image not found"});
     }

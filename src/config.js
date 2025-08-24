@@ -25,4 +25,9 @@ export const IMAGE_CONFIG = {
   
   // Delay between batch downloads (in milliseconds)
   batchDelay: 1000,
+  
+  // Disable OPDB fallbacks during testing to avoid hammering the database
+  // Set to true when testing/developing to only use local images
+  // Now disabled since Firebase Storage is working properly
+  disableOpdbFallback: true,
 }; 
