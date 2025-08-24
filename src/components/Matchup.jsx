@@ -74,25 +74,6 @@ function LoadingText({ text }) {
 function MatchupSkeleton() {
   return (
     <>
-      {/* Filter skeleton */}
-      <div className="flex justify-center mt-3 mb-4">
-        <div className="h-8 w-16 bg-gray-200 dark:bg-gray-700 rounded mr-2 animate-pulse"></div>
-        <div className="inline-flex shadow-sm gap-0">
-          {[1, 2, 3, 4].map((i) => (
-            <div
-              key={i}
-              className={`h-8 w-20 bg-gray-200 dark:bg-gray-700 animate-pulse ${
-                i === 1 ? 'rounded-l' : ''
-              } ${
-                i === 4 ? 'rounded-r' : ''
-              } ${
-                i > 1 ? '-ml-px' : ''
-              }`}
-            ></div>
-          ))}
-        </div>
-      </div>
-      
       {/* Cards skeleton */}
       <div className="flex flex-col md:grid md:grid-cols-2 gap-3 md:gap-6" style={{ height: 'calc(87vh - 110px)' }}>
         {[1, 2].map((i) => (
@@ -667,19 +648,97 @@ async function getDisplayInfo(machine, groups) {
     return <LoadingText text="Loading..." />;
   }
 
-  if (isLoading && !isVoting && !isFiltering) {
-    return <MatchupSkeleton />;
-  }
+  // Filter out null machines (only when matchup exists)
+  const validMachines = matchup?.machines?.filter(Boolean) || [];
 
-  if (!matchup || matchup.machines.length < 2) {
-    return <LoadingText text="Loading matchups" />;
-  }
-
-  // Filter out null machines
-  const validMachines = matchup.machines.filter(Boolean);
-  if (validMachines.length < 2) {
-    return <div className="text-center mt-10 text-gray-500">No matchups available for this filter.</div>;
-  }
+  // Always render filter buttons since they're static content
+  const content = (
+    <>
+      {/* Memoized Filter Buttons */}
+      {FilterButtons}
+      
+      {isLoading && !isVoting && !isFiltering ? (
+        <MatchupSkeleton />
+      ) : !matchup || !matchup.machines || matchup.machines.length < 2 ? (
+        <LoadingText text="Loading matchups" />
+      ) : validMachines.length < 2 ? (
+        <div className="text-center mt-10 text-gray-500">No matchups available for this filter.</div>
+      ) : (
+        <div className={`flex flex-col md:grid md:grid-cols-2 gap-3 md:gap-6 ${isVoting ? 'opacity-75 pointer-events-none' : ''}`} style={{ height: 'calc(87vh - 110px)' }}>
+          {validMachines.map((machine, i) => {
+            const isClicked = clickedCard === i;
+            const groupId = machine.opdb_id.split('-')[0];
+            const group = matchup.groups.find(g => g.opdb_id === groupId);
+            const name = group?.name || machine.name;
+            const year = machine.manufacture_date?.slice(0, 4) || 'Unknown';
+            const manufacturer = machine.manufacturer?.name || 'Unknown';
+            
+            // Check if this machine group is already marked as "haven't played"
+            const isAlreadyMarked = userPreferences?.blockedMachines?.some(blockedId => 
+              groupId.startsWith(blockedId)
+            );
+            
+            return (
+              <div
+                key={`${groupId}-${i}-${machine.opdb_id}`}
+                className={`border p-3 md:p-4 rounded shadow bg-white dark:bg-gray-800 text-center border-gray-200 dark:border-gray-700 flex flex-col items-center flex-1 md:h-[70vh] overflow-auto cursor-pointer md:hover:shadow-lg md:hover:bg-blue-50 dark:md:hover:bg-gray-700 transition-all duration-100 ease-out relative ${
+                  isClicked 
+                    ? 'scale-[0.98] md:bg-blue-50 dark:md:hover:bg-gray-600' 
+                    : 'scale-100'
+                }`}
+                style={{ minHeight: 0 }}
+                onClick={() => {
+                  if (TopBar.justClosedMenuRef && TopBar.justClosedMenuRef.current) {
+                    TopBar.justClosedMenuRef.current = false;
+                    return;
+                  }
+                  handleVote(i);
+                }}
+              >
+                {/* Haven't Played Button - Top Right Corner */}
+                <div className="absolute top-0 right-0 w-10 h-10 flex items-center justify-center">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (!isAlreadyMarked) {
+                        handleHaventPlayed(i);
+                      }
+                    }}
+                    className={`haven-played-btn w-5 h-5 flex items-center justify-center rounded-full transition-colors z-10 ${
+                      isAlreadyMarked
+                        ? 'text-gray-400 dark:text-gray-500 cursor-not-allowed'
+                        : 'text-red-600 dark:text-red-400 cursor-pointer'
+                    }`}
+                    title={isAlreadyMarked ? "Already marked as haven't played" : "Mark as haven't played"}
+                    disabled={isAlreadyMarked}
+                    style={{
+                      backgroundColor: 'transparent',
+                      background: 'transparent',
+                      WebkitTapHighlightColor: 'transparent'
+                    }}
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M20 12H4" />
+                    </svg>
+                  </button>
+                </div>
+                
+                <h2 className="text-lg md:text-xl font-bold mb-1 md:mb-2 text-gray-900 dark:text-gray-100 w-full">
+                  {name}
+                </h2>
+                <p className="text-xs md:text-sm text-gray-600 dark:text-gray-300 mb-1 md:mb-2 w-full">
+                  <span>{year}</span>
+                  <span className="mx-1">·</span>
+                  <span>{manufacturer}</span>
+                </p>
+                <MachineImage machine={machine} name={name} />
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </>
+  );
 
   return (
     <>
@@ -693,81 +752,7 @@ async function getDisplayInfo(machine, groups) {
         </div>
       )}
       
-      {/* Memoized Filter Buttons */}
-      {FilterButtons}
-      
-      <div className={`flex flex-col md:grid md:grid-cols-2 gap-3 md:gap-6 ${isVoting ? 'opacity-75 pointer-events-none' : ''}`} style={{ height: 'calc(87vh - 110px)' }}>
-      {validMachines.map((machine, i) => {
-        const isClicked = clickedCard === i;
-        const groupId = machine.opdb_id.split('-')[0];
-        const group = matchup.groups.find(g => g.opdb_id === groupId);
-        const name = group?.name || machine.name;
-        const year = machine.manufacture_date?.slice(0, 4) || 'Unknown';
-        const manufacturer = machine.manufacturer?.name || 'Unknown';
-        
-        // Check if this machine group is already marked as "haven't played"
-        const isAlreadyMarked = userPreferences?.blockedMachines?.some(blockedId => 
-          groupId.startsWith(blockedId)
-        );
-        
-        return (
-          <div
-            key={`${groupId}-${i}-${machine.opdb_id}`}
-            className={`border p-3 md:p-4 rounded shadow bg-white dark:bg-gray-800 text-center border-gray-200 dark:border-gray-700 flex flex-col items-center flex-1 md:h-[70vh] overflow-auto cursor-pointer md:hover:shadow-lg md:hover:bg-blue-50 dark:md:hover:bg-gray-700 transition-all duration-100 ease-out relative ${
-              isClicked 
-                ? 'scale-[0.98] md:bg-blue-50 dark:md:hover:bg-gray-600' 
-                : 'scale-100'
-            }`}
-            style={{ minHeight: 0 }}
-            onClick={() => {
-              if (TopBar.justClosedMenuRef && TopBar.justClosedMenuRef.current) {
-                TopBar.justClosedMenuRef.current = false;
-                return;
-              }
-              handleVote(i);
-            }}
-          >
-            {/* Haven't Played Button - Top Right Corner */}
-            <div className="absolute top-0 right-0 w-10 h-10 flex items-center justify-center">
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (!isAlreadyMarked) {
-                    handleHaventPlayed(i);
-                  }
-                }}
-                className={`haven-played-btn w-5 h-5 flex items-center justify-center rounded-full transition-colors z-10 ${
-                  isAlreadyMarked
-                    ? 'text-gray-400 dark:text-gray-500 cursor-not-allowed'
-                    : 'text-red-600 dark:text-red-400 cursor-pointer'
-                }`}
-                title={isAlreadyMarked ? "Already marked as haven't played" : "Mark as haven't played"}
-                disabled={isAlreadyMarked}
-                style={{
-                  backgroundColor: 'transparent',
-                  background: 'transparent',
-                  WebkitTapHighlightColor: 'transparent'
-                }}
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M20 12H4" />
-                </svg>
-              </button>
-            </div>
-            
-            <h2 className="text-lg md:text-xl font-bold mb-1 md:mb-2 text-gray-900 dark:text-gray-100 w-full">
-              {name}
-            </h2>
-            <p className="text-xs md:text-sm text-gray-600 dark:text-gray-300 mb-1 md:mb-2 w-full">
-              <span>{year}</span>
-              <span className="mx-1">·</span>
-              <span>{manufacturer}</span>
-            </p>
-            <MachineImage machine={machine} name={name} />
-          </div>
-        );
-      })}
-    </div>
+      {content}
     </>
   )
 }
