@@ -4,6 +4,7 @@ import { doc, getDoc } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
 import { getCachedData } from '../caching';
 import LoadingText from './LoadingText';
+import Card from './Card';
 
 const FILTERS = [
   { label: 'All', value: 'All' },
@@ -237,7 +238,7 @@ export default function Rankings() {
   if (!filteredRankings || filteredRankings.length === 0) return <div className="text-center mt-10 text-gray-500">No rankings yet. Vote on some matchups!</div>;
 
   return (
-    <div className="max-w-xl mx-auto mt-4 bg-white dark:bg-gray-800 p-6 rounded shadow">
+    <Card maxWidth="max-w-xl">
       {/* Tabs */}
       <div className="flex justify-center mt-3 mb-6">
         <div className="inline-flex shadow-sm gap-0">
@@ -286,6 +287,6 @@ export default function Rankings() {
           </div>
         )}
       </ol>
-    </div>
+    </Card>
   );
 } 

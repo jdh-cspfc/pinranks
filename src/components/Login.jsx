@@ -13,6 +13,7 @@ import {
   setDoc,
   getDoc
 } from 'firebase/firestore'
+import Card from './Card'
 
 export default function Login() {
   const [loginId, setLoginId] = useState('')
@@ -204,19 +205,20 @@ export default function Login() {
 
   if (user) {
     return (
-      <div className="bg-white dark:bg-gray-800 dark:text-gray-100 p-6 rounded shadow-md max-w-xs w-full md:w-80 mx-auto space-y-4">
+      <Card maxWidth="max-w-xs w-full md:w-80" className="dark:text-gray-100 space-y-4">
         <h2 className="text-xl font-bold">Welcome</h2>
         <p className="text-gray-700">Logged in as: <strong>{user.email}</strong></p>
         <button onClick={handleLogout} className="bg-red-500 text-white px-4 py-2 rounded w-full">
           Logout
         </button>
-      </div>
+      </Card>
     )
   }
 
   return (
-    <form onSubmit={handleSubmit} className="bg-white dark:bg-gray-800 dark:text-gray-100 p-6 rounded shadow-md max-w-xs w-full md:w-80 mx-auto space-y-4">
-      <h2 className="text-xl font-bold">{isLogin ? 'Login' : 'Register'}</h2>
+    <Card maxWidth="max-w-xs w-full md:w-80" className="dark:text-gray-100 space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <h2 className="text-xl font-bold">{isLogin ? 'Login' : 'Register'}</h2>
 
       {formError && (
         <div className="bg-red-100 text-red-700 text-sm p-2 rounded">
@@ -291,6 +293,7 @@ export default function Login() {
           Forgot password?
         </p>
       )}
-    </form>
+      </form>
+    </Card>
   )
 }

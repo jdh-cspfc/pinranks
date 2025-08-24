@@ -5,6 +5,7 @@ import { signOut } from 'firebase/auth';
 import { doc, getDoc, updateDoc, setDoc } from 'firebase/firestore';
 import TopBar from './TopBar';
 import LoadingText from './LoadingText';
+import Card from './Card';
 
 export default function Profile() {
   const { darkMode, setDarkMode } = useDarkMode();
@@ -92,7 +93,7 @@ export default function Profile() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto mt-4 bg-white dark:bg-gray-800 p-6 rounded shadow">
+    <Card>
       <h2 className="text-2xl font-bold mb-4 text-gray-900 dark:text-gray-100">Profile</h2>
       
       {/* Dark Mode Toggle */}
@@ -232,6 +233,6 @@ export default function Profile() {
       >
         Logout
       </button>
-    </div>
+    </Card>
   );
 } 
