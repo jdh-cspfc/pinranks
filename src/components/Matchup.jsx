@@ -5,6 +5,7 @@ import { collection, addDoc, serverTimestamp, doc, getDoc, setDoc, runTransactio
 import { onAuthStateChanged } from 'firebase/auth'
 import { getCachedData } from '../caching';
 import { getImageUrl } from '../imageUtils.js';
+import LoadingText from './LoadingText';
 
 // Component to handle async image loading
 function MachineImage({ machine, name }) {
@@ -61,14 +62,7 @@ function MachineImage({ machine, name }) {
   );
 }
 
-function LoadingText({ text }) {
-  return (
-    <div className="max-w-md mx-auto mt-10 bg-white dark:bg-gray-800 p-6 rounded shadow text-center">
-      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
-      <p className="mt-2 text-gray-600 dark:text-gray-400">{text}</p>
-    </div>
-  );
-}
+
 
 // Skeleton loader component
 function MatchupSkeleton() {

@@ -4,6 +4,7 @@ import { auth, db } from '../firebase';
 import { signOut } from 'firebase/auth';
 import { doc, getDoc, updateDoc, setDoc } from 'firebase/firestore';
 import TopBar from './TopBar';
+import LoadingText from './LoadingText';
 
 export default function Profile() {
   const { darkMode, setDarkMode } = useDarkMode();
@@ -83,24 +84,15 @@ export default function Profile() {
   };
 
   if (isLoading) {
-    return (
-      <div className="max-w-md mx-auto mt-10 bg-white dark:bg-gray-800 p-6 rounded shadow text-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
-        <p className="mt-2 text-gray-600 dark:text-gray-400">Loading...</p>
-      </div>
-    );
+    return <LoadingText text="Loading..." />;
   }
 
   if (!user) {
-    return (
-      <div className="max-w-md mx-auto mt-10 bg-white dark:bg-gray-800 p-6 rounded shadow text-center">
-        <p className="text-gray-600 dark:text-gray-400">Please log in to view your profile.</p>
-      </div>
-    );
+    return <LoadingText text="Please log in to view your profile." />;
   }
 
   return (
-    <div className="max-w-2xl mx-auto mt-10 bg-white dark:bg-gray-800 p-6 rounded shadow">
+    <div className="max-w-2xl mx-auto mt-4 bg-white dark:bg-gray-800 p-6 rounded shadow">
       <h2 className="text-2xl font-bold mb-4 text-gray-900 dark:text-gray-100">Profile</h2>
       
       {/* Dark Mode Toggle */}
