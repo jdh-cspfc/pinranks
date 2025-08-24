@@ -73,7 +73,7 @@ function MatchupSkeleton() {
         {[1, 2].map((i) => (
           <div
             key={i}
-            className="border p-3 md:p-4 rounded shadow bg-white dark:bg-gray-800 flex flex-col items-center flex-1 md:h-[70vh]"
+            className="p-3 md:p-4 rounded shadow bg-white dark:bg-gray-800 flex flex-col items-center flex-1 md:h-[70vh]"
           >
             <div className="h-6 w-3/4 bg-gray-200 dark:bg-gray-700 rounded mb-2 animate-pulse"></div>
             <div className="h-4 w-1/2 bg-gray-200 dark:bg-gray-700 rounded mb-4 animate-pulse"></div>
