@@ -690,7 +690,7 @@ async function getDisplayInfo(machine, groups) {
                 }}
               >
                 {/* Haven't Played Button - Top Right Corner */}
-                <div className="absolute top-0 right-0 w-10 h-10 flex items-center justify-center">
+                <div className="absolute top-0 right-0 w-11 h-11 md:w-[75px] md:h-[65px] flex items-center justify-center">
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
@@ -698,7 +698,7 @@ async function getDisplayInfo(machine, groups) {
                         handleHaventPlayed(i);
                       }
                     }}
-                    className={`haven-played-btn w-5 h-5 flex items-center justify-center rounded-full transition-colors z-10 ${
+                    className={`haven-played-btn w-5 h-5 md:w-[70px] md:h-[60px] flex items-center justify-center rounded-full transition-colors z-10 ${
                       isAlreadyMarked
                         ? 'text-gray-400 dark:text-gray-500 cursor-not-allowed'
                         : 'text-red-600 dark:text-red-400 cursor-pointer'
