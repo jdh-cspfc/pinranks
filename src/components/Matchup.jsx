@@ -7,40 +7,12 @@ import { getCachedData } from '../caching';
 import { getImageUrl } from '../imageUtils.js';
 import LoadingText from './LoadingText';
 
-// Component to handle async image loading
-function MachineImage({ machine, name }) {
-  const [imageUrl, setImageUrl] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(false);
 
-  useEffect(() => {
-    let mounted = true;
-    
-    const loadImage = async () => {
-      try {
-        setIsLoading(true);
-        setError(false);
-        const url = await getImageUrl(machine, 'large');
-        if (mounted) {
-          setImageUrl(url);
-          setIsLoading(false);
-        }
-      } catch (err) {
-        if (mounted) {
-          setError(true);
-          setIsLoading(false);
-        }
-      }
-    };
 
-    loadImage();
-    
-    return () => {
-      mounted = false;
-    };
-  }, [machine]);
-
-  if (isLoading) {
+// Component to handle individual machine image display
+function MachineImage({ machine, name, imageUrl, imageState }) {
+  // Show loading spinner only if this specific image is loading
+  if (imageState.loading) {
     return (
       <div className="mx-auto mb-2 flex items-center justify-center w-full h-[18vh] sm:h-64 lg:h-80 xl:h-96">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 dark:border-blue-400"></div>
@@ -48,7 +20,7 @@ function MachineImage({ machine, name }) {
     );
   }
 
-  if (error || !imageUrl) {
+  if (!imageUrl) {
     return null;
   }
 
@@ -56,7 +28,7 @@ function MachineImage({ machine, name }) {
     <img
       src={imageUrl}
       alt={name}
-      className="mx-auto mb-2 object-contain max-h-[18vh] sm:max-h-64 lg:max-h-80 xl:max-h-96 w-auto"
+      className="mx-auto mb-2 object-contain max-h-[18vh] sm:max-h-64 lg:max-h-80 xl:h-96 w-auto"
       style={{ maxWidth: '100%' }}
     />
   );
@@ -98,6 +70,11 @@ export default function Matchup() {
   const [userPreferencesLoaded, setUserPreferencesLoaded] = useState(false)
   const [confirmationMessage, setConfirmationMessage] = useState(null)
   const confirmationTimeoutRef = useRef(null)
+  const [imageStates, setImageStates] = useState({
+    left: { url: null, loading: true, hasImage: false, machineId: null },
+    right: { url: null, loading: true, hasImage: false, machineId: null }
+  })
+  const [bothImagesReady, setBothImagesReady] = useState(false)
 
   const FILTERS = [
     { label: 'All', value: 'All' },
@@ -332,6 +309,139 @@ const fetchMatchup = async (isFilterChange = false, isVoteChange = false) => {
     }
   }, [user, userPreferencesLoaded])
 
+  // Reset image states and load images when matchup changes
+  useEffect(() => {
+    if (matchup && matchup.machines) {
+      const validMachines = matchup.machines.filter(Boolean);
+      
+      // Check which machines have actually changed
+      const leftMachineId = validMachines[0]?.opdb_id;
+      const rightMachineId = validMachines[1]?.opdb_id;
+      const leftChanged = leftMachineId !== imageStates.left.machineId;
+      const rightChanged = rightMachineId !== imageStates.right.machineId;
+      
+      console.log('Image state check:', {
+        leftMachineId,
+        rightMachineId,
+        leftChanged,
+        rightChanged,
+        currentLeftId: imageStates.left.machineId,
+        currentRightId: imageStates.right.machineId
+      });
+      
+      // If no machines have changed, do nothing
+      if (!leftChanged && !rightChanged) {
+        console.log('No machines changed, skipping image update');
+        return;
+      }
+      
+      // Load both images simultaneously
+      const loadBothImages = async () => {
+        if (validMachines.length < 2) {
+          // Reset state when we don't have enough machines
+          setImageStates(prev => ({
+            ...prev,
+            left: { url: null, loading: false, hasImage: false, machineId: validMachines[0]?.opdb_id },
+            right: { url: null, loading: false, hasImage: false, machineId: validMachines[1]?.opdb_id }
+          }));
+          setBothImagesReady(true);
+          return;
+        }
+
+        try {
+          // Check if both machines have potential images first
+          const leftHasImage = validMachines[0]?.images?.find(img => img.type === 'backglass')?.urls?.large;
+          const rightHasImage = validMachines[1]?.images?.find(img => img.type === 'backglass')?.urls?.large;
+          
+          // Update state, preserving unchanged machines' images
+          setImageStates(prev => ({
+            left: {
+              url: leftChanged ? null : prev.left.url,
+              loading: leftChanged ? !!leftHasImage : false,
+              hasImage: leftChanged ? !!leftHasImage : prev.left.hasImage,
+              machineId: leftMachineId
+            },
+            right: {
+              url: rightChanged ? null : prev.right.url,
+              loading: rightChanged ? !!rightHasImage : false,
+              hasImage: rightChanged ? !!rightHasImage : prev.right.hasImage,
+              machineId: rightMachineId
+            }
+          }));
+
+          // Only load images for machines that have changed
+          const promises = [];
+          
+          if (leftChanged && leftHasImage) {
+            promises.push(
+              getImageUrl(validMachines[0], 'large')
+                .then(url => ({ side: 'left', url, success: true }))
+                .catch(() => ({ side: 'left', url: null, success: false }))
+            );
+          }
+          
+          if (rightChanged && rightHasImage) {
+            promises.push(
+              getImageUrl(validMachines[1], 'large')
+                .then(url => ({ side: 'right', url, success: true }))
+                .catch(() => ({ side: 'right', url: null, success: false }))
+            );
+          }
+
+          // If no new images to load, mark as ready immediately
+          if (promises.length === 0) {
+            // No new images to load, so we're ready immediately
+            setBothImagesReady(true);
+            return;
+          }
+          
+          // Only reset ready state if we actually have new images to load
+          // This prevents showing loading spinners for unchanged machines
+          if (promises.length > 0) {
+            setBothImagesReady(false);
+          }
+
+          // Wait for new images to load
+          const results = await Promise.all(promises);
+          
+          setImageStates(prevState => {
+            const newState = { ...prevState };
+            
+            results.forEach(({ side, url, success }) => {
+              newState[side] = {
+                url: success ? url : null,
+                loading: false,
+                hasImage: newState[side].hasImage,
+                machineId: newState[side].machineId
+              };
+            });
+            
+            // Check if both images are ready (either loaded or don't have images)
+            const leftReady = !newState.left.loading;
+            const rightReady = !newState.right.loading;
+            const bothReady = leftReady && rightReady;
+            
+            if (bothReady) {
+              setBothImagesReady(true);
+            }
+            
+            return newState;
+          });
+        } catch (err) {
+          // On error, mark both as ready to prevent infinite loading
+          setImageStates(prev => ({
+            ...prev,
+            left: { url: null, loading: false, hasImage: false, machineId: validMachines[0]?.opdb_id },
+            right: { url: null, loading: false, hasImage: false, machineId: validMachines[1]?.opdb_id }
+          }));
+          setBothImagesReady(true);
+        }
+      };
+
+      loadBothImages();
+    }
+  }, [matchup?.machines?.map(m => m.opdb_id).join(','), imageStates.left.machineId, imageStates.right.machineId])
+
   // Refetch when filter changes - but only if we have existing data
   useEffect(() => {
     if (matchup && !isLoading && userPreferences !== undefined) {
@@ -373,6 +483,31 @@ const fetchMatchup = async (isFilterChange = false, isVoteChange = false) => {
       }
     }
   }, [])
+
+  // Mobile-specific state validation: check for inconsistent states
+  useEffect(() => {
+    if (window.innerWidth < 640 && matchup?.machines && userPreferences?.blockedMachines) {
+      const inconsistentMachines = matchup.machines.filter(machine => {
+        if (!machine) return false;
+        const groupId = machine.opdb_id.split('-')[0];
+        return userPreferences.blockedMachines.some(blockedId => groupId.startsWith(blockedId));
+      });
+      
+      if (inconsistentMachines.length > 0) {
+        console.warn('Found inconsistent state on mobile:', {
+          inconsistentMachines: inconsistentMachines.map(m => ({ name: m.name, opdb_id: m.opdb_id })),
+          blockedMachines: userPreferences.blockedMachines,
+          currentTime: new Date().toISOString()
+        });
+        
+        // Force a refresh to resolve the inconsistency
+        setTimeout(() => {
+          console.log('Forcing refresh to resolve mobile state inconsistency');
+          fetchMatchup(false, true);
+        }, 1000);
+      }
+    }
+  }, [matchup?.machines, userPreferences?.blockedMachines]);
 
   // ✅ Helper to extract display data using group name
 async function getDisplayInfo(machine, groups) {
@@ -525,8 +660,58 @@ async function getDisplayInfo(machine, groups) {
       const validGroups = groupsData.filter(g => groupIdsWithMachines.has(g.opdb_id));
 
       if (validGroups.length === 0) {
-        console.warn('No valid groups available for replacement, keeping current machine');
-        return; // Don't redraw the entire matchup, just keep the current machine
+        console.warn('No valid groups available for replacement, trying broader search');
+        
+        // Fallback: try to find any valid machine that's not blocked, even if it doesn't match current filters
+        const fallbackMachines = machinesData.filter(m => {
+          // Still exclude blocked manufacturers
+          if (blockedManufacturers.includes(m.manufacturer?.name)) return false;
+          
+          // Still exclude machines the user has marked as "haven't played"
+          if (user && userPreferences && userPreferences.blockedMachines && userPreferences.blockedMachines.length > 0) {
+            if (userPreferences.blockedMachines.some(blockedId => m.opdb_id.startsWith(blockedId))) {
+              return false;
+            }
+          }
+          
+          // Still exclude the other machine in the current matchup
+          if (m.opdb_id.startsWith(otherGroupId)) return false;
+          
+          return true;
+        });
+        
+        if (fallbackMachines.length === 0) {
+          console.error('No machines available even with fallback search');
+          // Force a complete refresh to get new options
+          fetchMatchup(false, true);
+          return;
+        }
+        
+        // Pick a random fallback machine
+        const randomFallbackMachine = fallbackMachines[Math.floor(Math.random() * fallbackMachines.length)];
+        const fallbackGroupId = randomFallbackMachine.opdb_id.split('-')[0];
+        const fallbackGroup = groupsData.find(g => g.opdb_id === fallbackGroupId);
+        
+        if (fallbackGroup) {
+          const newMachine = selectBestMachineForGroup(fallbackGroupId, fallbackMachines, fallbackGroup.name);
+          if (newMachine) {
+            // Update the matchup with the fallback machine
+            const newMachines = [...matchup.machines];
+            newMachines[machineIndex] = newMachine;
+            
+            console.log('Using fallback machine:', newMachine.name);
+            setMatchup({
+              machines: newMachines,
+              groups: matchup.groups,
+            });
+            return true;
+          }
+        }
+        
+        // If all else fails, force a complete refresh
+        console.error('All replacement strategies failed, forcing refresh');
+        fetchMatchup(false, true);
+        return false;
       }
 
       // Pick a random valid group
@@ -534,8 +719,29 @@ async function getDisplayInfo(machine, groups) {
       const newMachine = selectBestMachineForGroup(randomGroup.opdb_id, filteredMachines, randomGroup.name);
 
       if (!newMachine) {
-        console.warn('Could not select a new machine, keeping current machine');
-        return; // Don't redraw the entire matchup, just keep the current machine
+        console.warn('Could not select a new machine, trying fallback');
+        
+        // Try to find any machine from the valid groups
+        for (const group of validGroups) {
+          const fallbackMachine = selectBestMachineForGroup(group.opdb_id, filteredMachines, group.name);
+          if (fallbackMachine) {
+            // Update the matchup with the fallback machine
+            const newMachines = [...matchup.machines];
+            newMachines[machineIndex] = fallbackMachine;
+            
+            console.log('Using fallback machine from valid group:', fallbackMachine.name);
+            setMatchup({
+              machines: newMachines,
+              groups: matchup.groups,
+            });
+            return true;
+          }
+        }
+        
+        // If still no machine found, force a complete refresh
+        console.error('Could not find replacement machine, forcing refresh');
+        fetchMatchup(false, true);
+        return false;
       }
 
       // Update the matchup with the new machine
@@ -549,11 +755,14 @@ async function getDisplayInfo(machine, groups) {
         machines: newMachines,
         groups: matchup.groups,
       });
+      
+      return true; // Success
 
     } catch (err) {
       console.error('Failed to replace machine:', err);
       // Don't redraw the entire matchup on error, just log the error
       // The user can still interact with the current matchup
+      return false;
     }
   };
 
@@ -572,6 +781,16 @@ async function getDisplayInfo(machine, groups) {
     const machine = matchup.machines[machineIndex];
     const groupId = machine.opdb_id.split('-')[0];
     
+    // Add mobile-specific debugging
+    const isMobile = window.innerWidth < 640; // sm breakpoint
+    console.log('handleHaventPlayed called:', {
+      machineIndex,
+      machineName: machine.name,
+      groupId,
+      isMobile,
+      currentTime: new Date().toISOString()
+    });
+    
     try {
       const userPrefsRef = doc(db, 'userPreferences', user.uid);
       
@@ -580,6 +799,7 @@ async function getDisplayInfo(machine, groups) {
       
       // Add the machine group to blocked list
       const newBlockedMachines = [...currentBlockedMachines, groupId];
+      console.log('Updating user preferences, blocked machines:', newBlockedMachines);
       setUserPreferences(prev => ({ 
         ...prev, 
         blockedMachines: newBlockedMachines 
@@ -605,8 +825,27 @@ async function getDisplayInfo(machine, groups) {
       }, 3000);
       
       console.log('Marking machine as haven\'t played, about to replace it');
+      
+      // Add a small delay on mobile to ensure state updates are processed
+      if (isMobile) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+      
       // Replace just the blocked machine with a new one
-      await replaceMachine(machineIndex);
+      const replacementSuccess = await replaceMachine(machineIndex);
+      
+      // If replacement failed, show an error message
+      if (!replacementSuccess) {
+        console.error('Machine replacement failed on mobile:', { machineIndex, groupId, isMobile });
+        setError('Failed to replace machine. Please try refreshing the page or try again later.');
+        // Revert the user preferences since replacement failed
+        setUserPreferences(prev => ({ 
+          ...prev, 
+          blockedMachines: currentBlockedMachines 
+        }));
+      } else {
+        console.log('Machine replacement successful:', { machineIndex, groupId, isMobile });
+      }
       
     } catch (err) {
       console.error('Failed to update preferences:', err);
@@ -645,6 +884,8 @@ async function getDisplayInfo(machine, groups) {
   // Filter out null machines (only when matchup exists)
   const validMachines = matchup?.machines?.filter(Boolean) || [];
 
+
+
   // Always render filter buttons since they're static content
   const content = (
     <>
@@ -658,7 +899,8 @@ async function getDisplayInfo(machine, groups) {
       ) : validMachines.length < 2 ? (
         <div className="text-center mt-10 text-gray-500">No matchups available for this filter.</div>
       ) : (
-        <div className={`flex flex-col sm:grid sm:grid-cols-2 gap-3 sm:gap-6 ${isVoting ? 'opacity-75 pointer-events-none' : ''}`} style={{ height: 'calc(87vh - 110px)' }}>
+        <>
+          <div className={`flex flex-col sm:grid sm:grid-cols-2 gap-3 sm:gap-6 ${isVoting ? 'opacity-75 pointer-events-none' : ''}`} style={{ height: 'calc(87vh - 110px)' }}>
           {validMachines.map((machine, i) => {
             const isClicked = clickedCard === i;
             const groupId = machine.opdb_id.split('-')[0];
@@ -671,6 +913,18 @@ async function getDisplayInfo(machine, groups) {
             const isAlreadyMarked = userPreferences?.blockedMachines?.some(blockedId => 
               groupId.startsWith(blockedId)
             );
+            
+            // Add mobile-specific debugging for state consistency
+            if (window.innerWidth < 640) {
+              console.log('Machine card state check:', {
+                machineIndex: i,
+                machineName: name,
+                groupId,
+                isAlreadyMarked,
+                blockedMachines: userPreferences?.blockedMachines,
+                currentTime: new Date().toISOString()
+              });
+            }
             
             return (
               <div
@@ -696,15 +950,19 @@ async function getDisplayInfo(machine, groups) {
                       e.stopPropagation();
                       if (!isAlreadyMarked) {
                         handleHaventPlayed(i);
+                      } else {
+                        // If machine is already marked but still visible, force a refresh
+                        console.warn('Attempting to interact with already-marked machine, forcing refresh');
+                        fetchMatchup(false, true);
                       }
                     }}
                     className={`haven-played-btn w-5 h-5 sm:w-[70px] sm:h-[60px] flex items-center justify-center rounded-full transition-colors z-10 ${
                       isAlreadyMarked
-                        ? 'text-gray-400 dark:text-gray-500 cursor-not-allowed'
+                        ? 'text-gray-400 dark:text-gray-500 cursor-pointer hover:text-red-600 dark:hover:text-red-400'
                         : 'text-red-600 dark:text-red-400 cursor-pointer'
                     }`}
-                    title={isAlreadyMarked ? "Already marked as haven't played" : "Mark as haven't played"}
-                    disabled={isAlreadyMarked}
+                    title={isAlreadyMarked ? "Already marked - click to refresh" : "Mark as haven't played"}
+                    disabled={false}
                     style={{
                       backgroundColor: 'transparent',
                       background: 'transparent',
@@ -728,15 +986,26 @@ async function getDisplayInfo(machine, groups) {
                   <span>{manufacturer}</span>
                 </p>
                 <div className="flex-1 flex items-center justify-center sm:hidden">
-                  <MachineImage machine={machine} name={name} />
+                  <MachineImage 
+                    machine={machine} 
+                    name={name} 
+                    imageUrl={i === 0 ? imageStates.left.url : imageStates.right.url}
+                    imageState={i === 0 ? imageStates.left : imageStates.right}
+                  />
                 </div>
                 <div className="hidden sm:absolute sm:inset-0 sm:flex sm:items-center sm:justify-center">
-                  <MachineImage machine={machine} name={name} />
+                  <MachineImage 
+                    machine={machine} 
+                    name={name} 
+                    imageUrl={i === 0 ? imageStates.left.url : imageStates.right.url}
+                    imageState={i === 0 ? imageStates.left : imageStates.right}
+                  />
                 </div>
               </div>
             );
           })}
         </div>
+        </>
       )}
     </>
   );
