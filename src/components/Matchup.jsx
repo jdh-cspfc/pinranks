@@ -727,7 +727,12 @@ async function getDisplayInfo(machine, groups) {
                   <span className="mx-1">·</span>
                   <span>{manufacturer}</span>
                 </p>
-                <MachineImage machine={machine} name={name} />
+                <div className="flex-1 flex items-center justify-center sm:hidden">
+                  <MachineImage machine={machine} name={name} />
+                </div>
+                <div className="hidden sm:absolute sm:inset-0 sm:flex sm:items-center sm:justify-center">
+                  <MachineImage machine={machine} name={name} />
+                </div>
               </div>
             );
           })}
