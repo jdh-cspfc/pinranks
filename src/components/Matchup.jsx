@@ -42,7 +42,7 @@ function MachineImage({ machine, name }) {
 
   if (isLoading) {
     return (
-      <div className="mx-auto mb-2 flex items-center justify-center w-full h-[18vh] md:h-64 lg:h-80 xl:h-96">
+      <div className="mx-auto mb-2 flex items-center justify-center w-full h-[18vh] sm:h-64 lg:h-80 xl:h-96">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 dark:border-blue-400"></div>
       </div>
     );
@@ -56,7 +56,7 @@ function MachineImage({ machine, name }) {
     <img
       src={imageUrl}
       alt={name}
-      className="mx-auto mb-2 object-contain max-h-[18vh] md:max-h-64 lg:max-h-80 xl:max-h-96 w-auto"
+      className="mx-auto mb-2 object-contain max-h-[18vh] sm:max-h-64 lg:max-h-80 xl:max-h-96 w-auto"
       style={{ maxWidth: '100%' }}
     />
   );
@@ -69,11 +69,11 @@ function MatchupSkeleton() {
   return (
     <>
       {/* Cards skeleton */}
-      <div className="flex flex-col md:grid md:grid-cols-2 gap-3 md:gap-6" style={{ height: 'calc(87vh - 110px)' }}>
+      <div className="flex flex-col sm:grid sm:grid-cols-2 gap-3 sm:gap-6" style={{ height: 'calc(87vh - 110px)' }}>
         {[1, 2].map((i) => (
           <div
             key={i}
-            className="p-3 md:p-4 rounded shadow bg-white dark:bg-gray-800 flex flex-col items-center flex-1 md:h-[70vh]"
+            className="p-3 sm:p-4 rounded shadow bg-white dark:bg-gray-800 flex flex-col items-center flex-1 sm:h-[70vh]"
           >
             <div className="h-6 w-3/4 bg-gray-200 dark:bg-gray-700 rounded mb-2 animate-pulse"></div>
             <div className="h-4 w-1/2 bg-gray-200 dark:bg-gray-700 rounded mb-4 animate-pulse"></div>
@@ -137,7 +137,7 @@ export default function Matchup() {
     <div className="flex justify-center mt-3 mb-4">
       <button
         key="All"
-        className={`px-2 py-1 md:px-4 md:py-2 border text-xs md:text-sm font-medium transition-colors whitespace-nowrap mr-2 rounded
+        className={`px-2 py-1 sm:px-4 sm:py-2 border text-xs sm:text-sm font-medium transition-colors whitespace-nowrap mr-2 rounded
           ${filter.includes('All')
             ? 'bg-blue-600 text-white border-blue-600'
             : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-700 hover:bg-blue-100 dark:hover:bg-gray-700'}`}
@@ -149,10 +149,10 @@ export default function Matchup() {
         {FILTERS.filter(f => f.value !== 'All').map((f, idx, arr) => (
           <button
             key={f.value}
-            className={`px-2 py-1 md:px-4 md:py-2 border text-sm md:text-sm font-medium transition-colors whitespace-nowrap
+            className={`px-2 py-1 sm:px-4 sm:py-2 border text-sm sm:text-sm font-medium transition-colors whitespace-nowrap
               ${filter.includes(f.value)
                 ? 'bg-blue-600 text-white border-blue-600'
-                : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-700 md:hover:bg-blue-100 dark:md:hover:bg-gray-700 md:active:bg-blue-200'}
+                : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-700 sm:hover:bg-blue-100 dark:sm:hover:bg-gray-700 sm:active:bg-blue-200'}
               ${idx === 0 ? 'rounded-l' : ''}
               ${idx === arr.length - 1 ? 'rounded-r' : ''}
               ${idx > 0 ? '-ml-px' : ''}
@@ -658,7 +658,7 @@ async function getDisplayInfo(machine, groups) {
       ) : validMachines.length < 2 ? (
         <div className="text-center mt-10 text-gray-500">No matchups available for this filter.</div>
       ) : (
-        <div className={`flex flex-col md:grid md:grid-cols-2 gap-3 md:gap-6 ${isVoting ? 'opacity-75 pointer-events-none' : ''}`} style={{ height: 'calc(87vh - 110px)' }}>
+        <div className={`flex flex-col sm:grid sm:grid-cols-2 gap-3 sm:gap-6 ${isVoting ? 'opacity-75 pointer-events-none' : ''}`} style={{ height: 'calc(87vh - 110px)' }}>
           {validMachines.map((machine, i) => {
             const isClicked = clickedCard === i;
             const groupId = machine.opdb_id.split('-')[0];
@@ -675,9 +675,9 @@ async function getDisplayInfo(machine, groups) {
             return (
               <div
                 key={`${groupId}-${i}-${machine.opdb_id}`}
-                className={`border p-3 md:p-4 rounded shadow bg-white dark:bg-gray-800 text-center border-gray-200 dark:border-gray-700 flex flex-col items-center flex-1 md:h-[70vh] overflow-auto cursor-pointer md:hover:shadow-lg md:hover:bg-blue-50 dark:md:hover:bg-gray-700 transition-all duration-100 ease-out relative ${
+                className={`border p-3 sm:p-4 rounded shadow bg-white dark:bg-gray-800 text-center border-gray-200 dark:border-gray-700 flex flex-col items-center flex-1 sm:h-[70vh] overflow-auto cursor-pointer sm:hover:shadow-lg sm:hover:bg-blue-50 dark:sm:hover:bg-gray-700 transition-all duration-100 ease-out relative ${
                   isClicked 
-                    ? 'scale-[0.98] md:bg-blue-50 dark:md:hover:bg-gray-600' 
+                    ? 'scale-[0.98] sm:bg-blue-50 dark:sm:hover:bg-gray-600' 
                     : 'scale-100'
                 }`}
                 style={{ minHeight: 0 }}
@@ -690,7 +690,7 @@ async function getDisplayInfo(machine, groups) {
                 }}
               >
                 {/* Haven't Played Button - Top Right Corner */}
-                <div className="absolute top-0 right-0 w-11 h-11 md:w-[75px] md:h-[65px] flex items-center justify-center">
+                <div className="absolute top-0 right-0 w-11 h-11 sm:w-[75px] sm:h-[65px] flex items-center justify-center">
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
@@ -698,7 +698,7 @@ async function getDisplayInfo(machine, groups) {
                         handleHaventPlayed(i);
                       }
                     }}
-                    className={`haven-played-btn w-5 h-5 md:w-[70px] md:h-[60px] flex items-center justify-center rounded-full transition-colors z-10 ${
+                    className={`haven-played-btn w-5 h-5 sm:w-[70px] sm:h-[60px] flex items-center justify-center rounded-full transition-colors z-10 ${
                       isAlreadyMarked
                         ? 'text-gray-400 dark:text-gray-500 cursor-not-allowed'
                         : 'text-red-600 dark:text-red-400 cursor-pointer'
@@ -717,10 +717,10 @@ async function getDisplayInfo(machine, groups) {
                   </button>
                 </div>
                 
-                <h2 className="text-lg md:text-xl font-bold mb-1 md:mb-2 text-gray-900 dark:text-gray-100 w-full">
+                <h2 className="text-lg sm:text-xl font-bold mb-1 sm:mb-2 text-gray-900 dark:text-gray-100 w-full">
                   {name}
                 </h2>
-                <p className="text-xs md:text-sm text-gray-600 dark:text-gray-300 mb-1 md:mb-2 w-full">
+                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 mb-1 sm:mb-2 w-full">
                   <span>{year}</span>
                   <span className="mx-1">·</span>
                   <span>{manufacturer}</span>
@@ -738,7 +738,7 @@ async function getDisplayInfo(machine, groups) {
     <>
       {/* Minimal Toast Notification */}
       {confirmationMessage && (
-        <div className="fixed bottom-2 left-1/2 transform -translate-x-1/2 md:left-auto md:transform-none md:right-4 z-50 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 px-3 py-2 rounded-lg shadow-lg max-w-xs">
+        <div className="fixed bottom-2 left-1/2 transform -translate-x-1/2 sm:left-auto sm:transform-none sm:right-4 z-50 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 px-3 py-2 rounded-lg shadow-lg max-w-xs">
           <div className="flex items-center gap-2">
             <div className="w-1.5 h-1.5 bg-green-500 rounded-full flex-shrink-0"></div>
             <span className="text-xs">{confirmationMessage}</span>
