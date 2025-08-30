@@ -484,7 +484,7 @@ const fetchMatchup = async (isFilterChange = false, isVoteChange = false) => {
     }
   }, [])
 
-  // Mobile-specific state validation: check for inconsistent states
+  // Smart mobile validation: only runs when there's a real stuck machine problem
   useEffect(() => {
     if (window.innerWidth < 640 && matchup?.machines && userPreferences?.blockedMachines) {
       const inconsistentMachines = matchup.machines.filter(machine => {
@@ -494,20 +494,50 @@ const fetchMatchup = async (isFilterChange = false, isVoteChange = false) => {
       });
       
       if (inconsistentMachines.length > 0) {
-        console.warn('Found inconsistent state on mobile:', {
+        console.warn('Mobile: Found potentially stuck machines:', {
           inconsistentMachines: inconsistentMachines.map(m => ({ name: m.name, opdb_id: m.opdb_id })),
           blockedMachines: userPreferences.blockedMachines,
           currentTime: new Date().toISOString()
         });
         
-        // Force a refresh to resolve the inconsistency
-        setTimeout(() => {
-          console.log('Forcing refresh to resolve mobile state inconsistency');
-          fetchMatchup(false, true);
-        }, 1000);
+        // Use a longer timeout to avoid interfering with normal replacement flow
+        // This prevents the flash issue while still handling genuinely stuck machines
+        const timeoutId = setTimeout(() => {
+          console.log('Mobile: Running smart validation for potentially stuck machines');
+          
+          // Try to replace stuck machines individually first
+          const replaceStuckMachines = async () => {
+            let allReplaced = true;
+            
+            for (const machine of inconsistentMachines) {
+              const machineIndex = matchup.machines.findIndex(m => m?.opdb_id === machine.opdb_id);
+              if (machineIndex !== -1) {
+                console.log(`Mobile: Attempting to replace stuck machine: ${machine.name}`);
+                const success = await replaceMachine(machineIndex);
+                if (!success) {
+                  allReplaced = false;
+                  console.warn(`Mobile: Failed to replace stuck machine: ${machine.name}`);
+                }
+              }
+            }
+            
+            // Only force a full refresh if individual replacement completely failed
+            if (!allReplaced) {
+              console.warn('Mobile: Individual replacement failed, forcing full refresh to resolve stuck state');
+              fetchMatchup(false, true);
+            } else {
+              console.log('Mobile: Successfully replaced all stuck machines individually');
+            }
+          };
+          
+          replaceStuckMachines();
+        }, 5000); // Wait 5 seconds to see if normal replacement resolves it
+        
+        // Clean up timeout if component unmounts or dependencies change
+        return () => clearTimeout(timeoutId);
       }
     }
-  }, [matchup?.machines, userPreferences?.blockedMachines]);
+  }, [userPreferences?.blockedMachines]); // Only depend on preferences, not machines
 
   // ✅ Helper to extract display data using group name
 async function getDisplayInfo(machine, groups) {
@@ -800,16 +830,21 @@ async function getDisplayInfo(machine, groups) {
       // Add the machine group to blocked list
       const newBlockedMachines = [...currentBlockedMachines, groupId];
       console.log('Updating user preferences, blocked machines:', newBlockedMachines);
-      setUserPreferences(prev => ({ 
-        ...prev, 
-        blockedMachines: newBlockedMachines 
-      }));
       
-      // Always use merge: true to prevent overwriting other data
-      await setDoc(userPrefsRef, {
-        blockedMachines: newBlockedMachines,
-        lastUpdated: new Date().toISOString()
-      }, { merge: true });
+      // On mobile, delay updating user preferences until after machine replacement
+      // This prevents the mobile state validation from running and causing a full refresh
+      if (!isMobile) {
+        setUserPreferences(prev => ({ 
+          ...prev, 
+          blockedMachines: newBlockedMachines 
+        }));
+        
+        // Always use merge: true to prevent overwriting other data
+        await setDoc(userPrefsRef, {
+          blockedMachines: newBlockedMachines,
+          lastUpdated: new Date().toISOString()
+        }, { merge: true });
+      }
       
       // Clear any existing timeout
       if (confirmationTimeoutRef.current) {
@@ -836,15 +871,57 @@ async function getDisplayInfo(machine, groups) {
       
       // If replacement failed, show an error message
       if (!replacementSuccess) {
-        console.error('Machine replacement failed on mobile:', { machineIndex, groupId, isMobile });
-        setError('Failed to replace machine. Please try refreshing the page or try again later.');
-        // Revert the user preferences since replacement failed
-        setUserPreferences(prev => ({ 
-          ...prev, 
-          blockedMachines: currentBlockedMachines 
-        }));
+        console.error('Machine replacement failed:', { machineIndex, groupId, isMobile });
+        
+        // On mobile, still update preferences even if replacement failed
+        // This ensures the machine is marked as blocked regardless of replacement success
+        if (isMobile) {
+          setUserPreferences(prev => ({ 
+            ...prev, 
+            blockedMachines: newBlockedMachines 
+          }));
+          
+          // Update Firestore with the new preferences
+          await setDoc(userPrefsRef, {
+            blockedMachines: newBlockedMachines,
+            lastUpdated: new Date().toISOString()
+          }, { merge: true });
+          
+          console.log('Mobile: User preferences updated even though replacement failed');
+        
+        // Log this as a potential stuck machine scenario
+        console.error('Mobile: Machine replacement failed - this might lead to a stuck machine:', {
+          machineName: machine.name,
+          groupId,
+          currentTime: new Date().toISOString()
+        });
+        } else {
+          setError('Failed to replace machine. Please try refreshing the page or try again later.');
+          // Revert the user preferences since replacement failed
+          setUserPreferences(prev => ({ 
+            ...prev, 
+            blockedMachines: currentBlockedMachines 
+          }));
+        }
       } else {
         console.log('Machine replacement successful:', { machineIndex, groupId, isMobile });
+        
+        // On mobile, update user preferences after successful replacement
+        // This prevents the mobile state validation from running before replacement
+        if (isMobile) {
+          setUserPreferences(prev => ({ 
+            ...prev, 
+            blockedMachines: newBlockedMachines 
+          }));
+          
+          // Update Firestore with the new preferences
+          await setDoc(userPrefsRef, {
+            blockedMachines: newBlockedMachines,
+            lastUpdated: new Date().toISOString()
+          }, { merge: true });
+          
+          console.log('Mobile: User preferences updated after successful replacement');
+        }
       }
       
     } catch (err) {
@@ -914,17 +991,26 @@ async function getDisplayInfo(machine, groups) {
               groupId.startsWith(blockedId)
             );
             
-            // Add mobile-specific debugging for state consistency
-            if (window.innerWidth < 640) {
-              console.log('Machine card state check:', {
-                machineIndex: i,
-                machineName: name,
-                groupId,
-                isAlreadyMarked,
-                blockedMachines: userPreferences?.blockedMachines,
-                currentTime: new Date().toISOString()
-              });
-            }
+                  // Add mobile-specific debugging for state consistency
+      if (window.innerWidth < 640) {
+        console.log('Mobile: Machine card state check:', {
+          machineIndex: i,
+          machineName: name,
+          groupId,
+          isAlreadyMarked,
+          blockedMachines: userPreferences?.blockedMachines,
+          currentTime: new Date().toISOString()
+        });
+        
+        // Log potential stuck machine scenarios
+        if (isAlreadyMarked) {
+          console.warn('Mobile: Rendering already-marked machine - this might indicate a stuck state:', {
+            machineName: name,
+            groupId,
+            blockedMachines: userPreferences?.blockedMachines
+          });
+        }
+      }
             
             return (
               <div
