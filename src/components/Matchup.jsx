@@ -5,7 +5,7 @@ import { collection, addDoc, serverTimestamp, doc, getDoc, setDoc, runTransactio
 import { onAuthStateChanged } from 'firebase/auth'
 import { getCachedData } from '../caching';
 import { getImageUrl } from '../imageUtils.js';
-import LoadingText from './LoadingText';
+// import LoadingText from './LoadingText'; // Removed for testing
 
 
 
@@ -36,26 +36,7 @@ function MachineImage({ machine, name, imageUrl, imageState }) {
 
 
 
-// Skeleton loader component
-function MatchupSkeleton() {
-  return (
-    <>
-      {/* Cards skeleton */}
-      <div className="flex flex-col sm:grid sm:grid-cols-2 gap-3 sm:gap-6" style={{ height: 'calc(87vh - 110px)' }}>
-        {[1, 2].map((i) => (
-          <div
-            key={i}
-            className="p-3 sm:p-4 rounded shadow bg-white dark:bg-gray-800 flex flex-col items-center flex-1 sm:h-[70vh]"
-          >
-            <div className="h-6 w-3/4 bg-gray-200 dark:bg-gray-700 rounded mb-2 animate-pulse"></div>
-            <div className="h-4 w-1/2 bg-gray-200 dark:bg-gray-700 rounded mb-4 animate-pulse"></div>
-            <div className="h-32 w-full bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
-          </div>
-        ))}
-      </div>
-    </>
-  );
-}
+// Skeleton loader component removed for testing
 
 export default function Matchup() {
   const [matchup, setMatchup] = useState(null)
@@ -955,7 +936,7 @@ async function getDisplayInfo(machine, groups) {
   // Show loading if user preferences haven't been loaded yet
   // Use a more robust check to avoid flashing during state updates
   if (!userPreferencesLoaded) {
-    return <LoadingText text="Loading..." />;
+    return null; // Removed loading box for testing
   }
 
   // Filter out null machines (only when matchup exists)
@@ -969,10 +950,8 @@ async function getDisplayInfo(machine, groups) {
       {/* Memoized Filter Buttons */}
       {FilterButtons}
       
-      {isLoading && !isVoting && !isFiltering ? (
-        <MatchupSkeleton />
-      ) : !matchup || !matchup.machines || matchup.machines.length < 2 ? (
-        <LoadingText text="Loading matchups" />
+      {!matchup || !matchup.machines || matchup.machines.length < 2 ? (
+        null // Removed loading box for testing
       ) : validMachines.length < 2 ? (
         <div className="text-center mt-10 text-gray-500">No matchups available for this filter.</div>
       ) : (

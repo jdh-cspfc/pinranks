@@ -4,7 +4,7 @@ import { auth, db } from '../firebase';
 import { signOut } from 'firebase/auth';
 import { doc, getDoc, updateDoc, setDoc } from 'firebase/firestore';
 import TopBar from './TopBar';
-import LoadingText from './LoadingText';
+// import LoadingText from './LoadingText'; // Removed for testing
 import Card from './Card';
 
 export default function Profile() {
@@ -85,11 +85,11 @@ export default function Profile() {
   };
 
   if (isLoading) {
-    return <LoadingText text="Loading..." />;
+    return null; // Removed loading box for testing
   }
 
   if (!user) {
-    return <LoadingText text="Please log in to view your profile." />;
+    return null; // Removed loading box for testing
   }
 
   return (

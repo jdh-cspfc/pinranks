@@ -3,7 +3,7 @@ import { db, auth } from '../firebase';
 import { doc, getDoc } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
 import { getCachedData } from '../caching';
-import LoadingText from './LoadingText';
+// import LoadingText from './LoadingText'; // Removed for testing
 import Card from './Card';
 
 const FILTERS = [
@@ -232,9 +232,9 @@ export default function Rankings() {
     setHasMore(hasMoreItems);
   }, [hasMoreItems]);
 
-  if (loading || !machines || !groups) return <LoadingText text="Loading..." />;
+  if (loading || !machines || !groups) return null; // Removed loading box for testing
   if (!user) return <div className="text-center mt-10 text-gray-500">Please log in to see your rankings.</div>;
-  if (rankingsLoading) return <LoadingText text="Loading..." />;
+  if (rankingsLoading) return null; // Removed loading box for testing
   if (!filteredRankings || filteredRankings.length === 0) return <div className="text-center mt-10 text-gray-500">No rankings yet. Vote on some matchups!</div>;
 
   return (
