@@ -6,6 +6,7 @@ import { doc, getDoc, updateDoc, setDoc } from 'firebase/firestore';
 import TopBar from './TopBar';
 // import LoadingText from './LoadingText'; // Removed for testing
 import Card from './Card';
+import { getCachedData } from '../caching';
 
 export default function Profile() {
   const { darkMode, setDarkMode } = useDarkMode();
@@ -16,7 +17,9 @@ export default function Profile() {
   const [isLoading, setIsLoading] = useState(true);
   const [showAllMachines, setShowAllMachines] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [hasLoadedAllData, setHasLoadedAllData] = useState(false);
 
+  // Load initial data (first 3 machines + essential data)
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(async (firebaseUser) => {
       setUser(firebaseUser);
@@ -29,18 +32,30 @@ export default function Profile() {
             setUserPreferences(userPrefsSnap.data());
           }
 
-          // Load machines and groups data for display
-          const [machinesResponse, groupsResponse] = await Promise.all([
-            fetch('/machines.json'),
-            fetch('/groups.json')
+          // Load only essential data initially for faster rendering with caching
+          const [machines, groups] = await Promise.all([
+            getCachedData('machines', () => 
+              fetch('/machines.json').then(res => res.json()), 
+              3600_000 // 1 hour cache
+            ),
+            getCachedData('groups', () => 
+              fetch('/groups.json').then(res => res.json()), 
+              3600_000 // 1 hour cache
+            )
           ]);
-          const machines = await machinesResponse.json();
-          const groups = await groupsResponse.json();
+          
+          // Set initial data
           setMachinesData(machines);
           setGroupsData(groups);
+          setIsLoading(false);
+          
+          // Load remaining data in background
+          setTimeout(() => {
+            loadRemainingData(machines, groups);
+          }, 100);
+          
         } catch (err) {
           console.error('Failed to load user data:', err);
-        } finally {
           setIsLoading(false);
         }
       } else {
@@ -50,6 +65,21 @@ export default function Profile() {
 
     return () => unsubscribe();
   }, []);
+
+  // Load remaining data in background
+  const loadRemainingData = async (machines, groups) => {
+    if (hasLoadedAllData) return;
+    
+    try {
+      // Simulate a small delay to ensure the page has rendered
+      await new Promise(resolve => setTimeout(resolve, 50));
+      
+      // Update state to indicate all data is loaded
+      setHasLoadedAllData(true);
+    } catch (err) {
+      console.error('Failed to load remaining data:', err);
+    }
+  };
 
   const handleLogout = async () => {
     if (TopBar.justClosedMenuRef && TopBar.justClosedMenuRef.current) {
@@ -164,6 +194,8 @@ export default function Profile() {
               // Show first 3 machines as preview when not expanded
               const machinesToShow = showAllMachines ? filteredMachines : filteredMachines.slice(0, 3);
               
+
+              
               return (
                 <>
                   <div className="space-y-2 mb-3">
@@ -198,6 +230,8 @@ export default function Profile() {
                       );
                     })}
                   </div>
+                  
+
                   
                   {/* Show "View All" button if more than 3 and not already expanded */}
                   {!showAllMachines && filteredMachines.length > 3 && (

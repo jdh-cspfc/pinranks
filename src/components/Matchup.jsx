@@ -222,9 +222,15 @@ const fetchMatchup = async (isFilterChange = false, isVoteChange = false) => {
       }
     };
     
-    // Try to fetch both files directly without caching
-    const machinesData = await fetchWithRetry('/machines.json');
-    const groupsData = await fetchWithRetry('/groups.json');
+    // Try to fetch both files with caching
+    const machinesData = await getCachedData('machines', () => 
+      fetchWithRetry('/machines.json'), 
+      3600_000 // 1 hour cache
+    );
+    const groupsData = await getCachedData('groups', () => 
+      fetchWithRetry('/groups.json'), 
+      3600_000 // 1 hour cache
+    );
 
     const blockedManufacturers = [
       "Mac Pinball",
