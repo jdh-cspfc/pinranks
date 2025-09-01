@@ -213,81 +213,118 @@ function selectBestMachineForGroup(groupId, machinesData, groupName) {
 
 
 
-  // ✅ Handle user vote
-  const handleVote = async (winnerIndex) => {
+  // Handle UI feedback for vote click
+  const handleVoteClick = useCallback((winnerIndex) => {
+    setClickedCard(winnerIndex);
+    setTimeout(() => {
+      setClickedCard(null);
+    }, 150);
+  }, []);
+
+  // Save vote to Firestore
+  const saveVoteToFirestore = useCallback(async (winnerId, loserId) => {
+    try {
+      await addDoc(collection(db, 'userVotes'), {
+        userId: user.uid,
+        winnerId,
+        loserId,
+        timestamp: serverTimestamp(),
+      });
+    } catch (err) {
+      console.error('Failed to save vote:', {
+        userId: user.uid,
+        winnerId,
+        loserId,
+        error: err.message
+      });
+      throw err;
+    }
+  }, [user]);
+
+  // Update Elo rankings with transaction
+  const updateEloRankings = useCallback(async (winnerId, loserId, winnerGroup, loserGroup) => {
+    const rankingsRef = doc(db, 'userRankings', user.uid);
+    const baseScore = 1200;
+
+    try {
+      await runTransaction(db, async (transaction) => {
+        const rankingsSnap = await transaction.get(rankingsRef);
+        let rankings = rankingsSnap.exists() ? rankingsSnap.data().rankings : {};
+        
+        // Helper to get or initialize Elo object
+        const getEloObj = (obj) => obj && typeof obj === 'object' ? { ...obj } : { all: obj ?? baseScore };
+        const winnerElo = getEloObj(rankings[winnerId]);
+        const loserElo = getEloObj(rankings[loserId]);
+        
+        // Always update 'all' Elo
+        const [newWinnerAll, newLoserAll] = calculateElo(winnerElo.all ?? baseScore, loserElo.all ?? baseScore);
+        winnerElo.all = newWinnerAll;
+        loserElo.all = newLoserAll;
+        
+        // Update filter-specific Elo if both are in the same group
+        if (winnerGroup && winnerGroup === loserGroup) {
+          const [newWinnerF, newLoserF] = calculateElo(
+            winnerElo[winnerGroup] ?? baseScore,
+            loserElo[loserGroup] ?? baseScore
+          );
+          winnerElo[winnerGroup] = newWinnerF;
+          loserElo[loserGroup] = newLoserF;
+        }
+        
+        rankings = {
+          ...rankings,
+          [winnerId]: winnerElo,
+          [loserId]: loserElo,
+        };
+        
+        transaction.set(rankingsRef, { rankings }, { merge: true });
+      });
+    } catch (err) {
+      console.error('Failed to update Elo rankings:', {
+        userId: user.uid,
+        winnerId,
+        loserId,
+        error: err.message
+      });
+      throw err;
+    }
+  }, [user]);
+
+  // Main vote handler - orchestrates the voting process
+  const handleVote = useCallback(async (winnerIndex) => {
     if (!user) {
       setError('You must be logged in to vote.');
       return;
     }
     
-    // Set clicked card for animation feedback
-    setClickedCard(winnerIndex);
+    const { machines } = matchup;
+    const winnerId = machines[winnerIndex].opdb_id;
+    const loserId = machines[1 - winnerIndex].opdb_id;
+    const winnerGroup = getFilterGroup(machines[winnerIndex].display);
+    const loserGroup = getFilterGroup(machines[1 - winnerIndex].display);
     
-    // Reset animation after a short delay
-    setTimeout(() => {
-      setClickedCard(null);
-    }, 150);
+    // Handle UI feedback
+    handleVoteClick(winnerIndex);
     
-    const { machines, groups } = matchup;
-    // Note: We don't actually use winner/loser display info in the vote handler
-    // so we can skip the async calls for performance
     // Optimistically fetch next matchup
     fetchMatchup(false, true);
-    // Firestore work in background - fail silently for user
+    
+    // Save vote and update rankings in background
     (async () => {
       try {
-        await addDoc(collection(db, 'userVotes'), {
-          userId: user.uid,
-          winnerId: machines[winnerIndex].opdb_id,
-          loserId: machines[1 - winnerIndex].opdb_id,
-          timestamp: serverTimestamp(),
-        });
-        // --- Elo ranking update with transaction ---
-        const rankingsRef = doc(db, 'userRankings', user.uid);
-        const winnerId = machines[winnerIndex].opdb_id;
-        const loserId = machines[1 - winnerIndex].opdb_id;
-        const baseScore = 1200;
-        const winnerGroup = getFilterGroup(machines[winnerIndex].display);
-        const loserGroup = getFilterGroup(machines[1 - winnerIndex].display);
-        await runTransaction(db, async (transaction) => {
-          const rankingsSnap = await transaction.get(rankingsRef);
-          let rankings = rankingsSnap.exists() ? rankingsSnap.data().rankings : {};
-          // Helper to get or initialize Elo object
-          const getEloObj = (obj) => obj && typeof obj === 'object' ? { ...obj } : { all: obj ?? baseScore };
-          const winnerElo = getEloObj(rankings[winnerId]);
-          const loserElo = getEloObj(rankings[loserId]);
-          // Always update 'all' Elo
-          const [newWinnerAll, newLoserAll] = calculateElo(winnerElo.all ?? baseScore, loserElo.all ?? baseScore);
-          winnerElo.all = newWinnerAll;
-          loserElo.all = newLoserAll;
-          // Update filter-specific Elo if both are in the same group
-          if (winnerGroup && winnerGroup === loserGroup) {
-            const [newWinnerF, newLoserF] = calculateElo(
-              winnerElo[winnerGroup] ?? baseScore,
-              loserElo[loserGroup] ?? baseScore
-            );
-            winnerElo[winnerGroup] = newWinnerF;
-            loserElo[loserGroup] = newLoserF;
-          }
-          rankings = {
-            ...rankings,
-            [winnerId]: winnerElo,
-            [loserId]: loserElo,
-          };
-          transaction.set(rankingsRef, { rankings }, { merge: true });
-        });
-        // --- End Elo ranking update ---
+        await saveVoteToFirestore(winnerId, loserId);
+        await updateEloRankings(winnerId, loserId, winnerGroup, loserGroup);
       } catch (err) {
         // Fail silently for user, but log for debugging
-        console.error('Vote failed to save:', {
+        console.error('Vote process failed:', {
           userId: user.uid,
-          winnerId: machines[winnerIndex].opdb_id,
-          loserId: machines[1 - winnerIndex].opdb_id,
+          winnerId,
+          loserId,
           error: err.message
         });
       }
     })();
-  };
+  }, [user, matchup, handleVoteClick, saveVoteToFirestore, updateEloRankings, fetchMatchup]);
 
 
 
