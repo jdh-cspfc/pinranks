@@ -4,9 +4,9 @@ import { useImageLoading } from '../../hooks/useImageLoading';
 import { useUserPreferences } from '../../hooks/useUserPreferences';
 import { useVoting } from '../../hooks/useVoting';
 import FilterButtons from './FilterButtons';
-import MachineCard from './MachineCard';
+import MatchupDisplay from './MatchupDisplay';
 
-export default function MatchupContainer() {
+export default function MatchupManager() {
   try {
     const [filter, setFilter] = useState(['All']);
     
@@ -47,38 +47,25 @@ export default function MatchupContainer() {
         {/* Filter Buttons */}
         <FilterButtons filter={filter} onFilterChange={setFilter} />
         
-        {!matchup || !matchup.machines || matchup.machines.length < 2 ? (
-          null // Removed loading box for testing
-        ) : validMachines.length < 2 ? (
-          <div className="text-center mt-10 text-gray-500">No matchups available for this filter.</div>
-        ) : (
-          <>
-            <div className={`flex flex-col sm:grid sm:grid-cols-2 gap-3 sm:gap-6 ${isVoting ? 'opacity-75 pointer-events-none' : ''}`} style={{ height: 'calc(87vh - 110px)' }}>
-              {validMachines.map((machine, i) => (
-                <MachineCard
-                  key={`${machine.opdb_id.split('-')[0]}-${i}-${machine.opdb_id}`}
-                  machine={machine}
-                  index={i}
-                  matchup={matchup}
-                  imageStates={imageStates}
-                  clickedCard={clickedCard}
-                  userPreferences={userPreferences}
-                  handleVote={handleVote}
-                  handleHaventPlayed={handleHaventPlayed}
-                  replaceMachine={replaceMachine}
-                  fetchMatchup={fetchMatchup}
-                />
-              ))}
-            </div>
-          </>
-        )}
+        <MatchupDisplay
+          matchup={matchup}
+          validMachines={validMachines}
+          isVoting={isVoting}
+          imageStates={imageStates}
+          clickedCard={clickedCard}
+          userPreferences={userPreferences}
+          handleVote={handleVote}
+          handleHaventPlayed={handleHaventPlayed}
+          replaceMachine={replaceMachine}
+          fetchMatchup={fetchMatchup}
+        />
       </>
     );
   } catch (err) {
-    console.error('Error in MatchupContainer:', err);
+    console.error('Error in MatchupManager:', err);
     return (
       <div className="p-4 text-red-600">
-        <h2>Error in MatchupContainer</h2>
+        <h2>Error in MatchupManager</h2>
         <p>{err.message}</p>
         <pre>{err.stack}</pre>
       </div>

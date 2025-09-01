@@ -1,5 +1,5 @@
 import React from 'react';
-import { MatchupContainer } from './Matchup/index.js';
+import { MatchupManager } from './Matchup/index.js';
 import { useUserPreferences } from '../hooks/useUserPreferences';
 
 export default function Matchup() {
@@ -17,7 +17,7 @@ export default function Matchup() {
         </div>
       )}
       
-      <MatchupContainer />
+      <MatchupManager />
     </>
   );
 }
