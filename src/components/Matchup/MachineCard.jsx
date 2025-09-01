@@ -1,7 +1,6 @@
 import React from 'react';
 import TopBar from '../TopBar';
-import MachineHeader from './MachineHeader';
-import MachineImageContainer from './MachineImageContainer';
+import MachineImage from './MachineImage';
 import HaventPlayedButton from './HaventPlayedButton';
 
 // Component to handle individual machine card display
@@ -61,15 +60,20 @@ export default function MachineCard({
         fetchMatchup={fetchMatchup}
       />
       
-      {/* Machine Header */}
-      <MachineHeader 
-        name={name}
-        year={year}
-        manufacturer={manufacturer}
-      />
+      {/* Machine Header - merged from MachineHeader component */}
+      <div className="w-full flex justify-center">
+        <h2 className="text-lg sm:text-xl font-bold mb-1 sm:mb-2 text-gray-900 dark:text-gray-100 break-words leading-tight text-center" style={{ maxWidth: 'calc(100% - 4rem)' }}>
+          {name}
+        </h2>
+      </div>
+      <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 mb-1 sm:mb-2 w-full">
+        <span>{year}</span>
+        <span className="mx-1">·</span>
+        <span>{manufacturer}</span>
+      </p>
       
       {/* Machine Image */}
-      <MachineImageContainer
+      <MachineImage
         machine={machine}
         name={name}
         imageUrl={imageUrl}

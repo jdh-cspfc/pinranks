@@ -1,21 +1,20 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useMatchupData } from '../../hooks/useMatchupData';
 import { useImageLoading } from '../../hooks/useImageLoading';
 import { useUserPreferences } from '../../hooks/useUserPreferences';
-import { processVote } from '../../services/votingService';
+import { useVoting } from '../../hooks/useVoting';
 import FilterButtons from './FilterButtons';
 import MachineCard from './MachineCard';
-import { getFilterGroup } from '../../utils/filterUtils';
 
 export default function MatchupContainer() {
   try {
     const [filter, setFilter] = useState(['All']);
-    const [clickedCard, setClickedCard] = useState(null);
     
     // Custom hooks for complex logic
     const { user, userPreferences, userPreferencesLoaded, confirmationMessage, handleHaventPlayed } = useUserPreferences();
     const { matchup, error, isLoading, isFiltering, isVoting, fetchMatchup, replaceMachine, setError } = useMatchupData(filter, user, userPreferences);
     const { imageStates, bothImagesReady } = useImageLoading(matchup);
+    const { clickedCard, handleVote } = useVoting(user, matchup, fetchMatchup, setError);
 
     // ✅ Run on first load - but only after user preferences are loaded
     useEffect(() => {
@@ -30,51 +29,6 @@ export default function MatchupContainer() {
         fetchMatchup(true); // Pass true to indicate this is a filter change
       }
     }, [filter]);
-
-    // Handle UI feedback for vote click
-    const handleVoteClick = useCallback((winnerIndex) => {
-      setClickedCard(winnerIndex);
-      setTimeout(() => {
-        setClickedCard(null);
-      }, 150);
-    }, []);
-
-
-
-    // Main vote handler - orchestrates the voting process
-    const handleVote = useCallback(async (winnerIndex) => {
-      if (!user) {
-        setError('You must be logged in to vote.');
-        return;
-      }
-      
-      const { machines } = matchup;
-      const winnerId = machines[winnerIndex].opdb_id;
-      const loserId = machines[1 - winnerIndex].opdb_id;
-      const winnerGroup = getFilterGroup(machines[winnerIndex].display);
-      const loserGroup = getFilterGroup(machines[1 - winnerIndex].display);
-      
-      // Handle UI feedback
-      handleVoteClick(winnerIndex);
-      
-      // Optimistically fetch next matchup
-      fetchMatchup(false, true);
-      
-      // Save vote and update rankings in background
-      (async () => {
-        try {
-          await processVote(user.uid, winnerId, loserId, winnerGroup, loserGroup);
-        } catch (err) {
-          // Fail silently for user, but log for debugging
-          console.error('Vote process failed:', {
-            userId: user.uid,
-            winnerId,
-            loserId,
-            error: err.message
-          });
-        }
-      })();
-    }, [user, matchup, handleVoteClick, fetchMatchup]);
 
     if (error) {
       return <div className="text-red-600">{error}</div>;
