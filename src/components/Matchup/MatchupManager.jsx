@@ -10,9 +10,15 @@ export default function MatchupManager() {
   try {
     const [filter, setFilter] = useState(['All']);
     
-    // Custom hooks for complex logic
-    const { user, userPreferences, userPreferencesLoaded, confirmationMessage, handleHaventPlayed } = useUserPreferences();
+    // First, get user preferences (which includes user auth)
+    const { user, userPreferences, userPreferencesLoaded, confirmationMessage, createHandleHaventPlayed } = useUserPreferences();
+    
+    // Then, get matchup data using the user info
     const { matchup, error, isLoading, isFiltering, isVoting, fetchMatchup, replaceMachine, setError } = useMatchupData(filter, user, userPreferences);
+    
+    // Create the handleHaventPlayed function with the replaceMachine dependency
+    const handleHaventPlayed = createHandleHaventPlayed(replaceMachine);
+    
     const { imageStates, bothImagesReady } = useImageLoading(matchup);
     const { clickedCard, handleVote } = useVoting(user, matchup, fetchMatchup, setError);
 
@@ -58,6 +64,7 @@ export default function MatchupManager() {
           handleHaventPlayed={handleHaventPlayed}
           replaceMachine={replaceMachine}
           fetchMatchup={fetchMatchup}
+          isMachineBlocked={userPreferences.isMachineBlocked}
         />
       </>
     );

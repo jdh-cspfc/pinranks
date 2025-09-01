@@ -14,7 +14,8 @@ export default function MachineCard({
   handleVote, 
   handleHaventPlayed, 
   replaceMachine, 
-  fetchMatchup 
+  fetchMatchup,
+  isMachineBlocked
 }) {
   const isClicked = clickedCard === index;
   const groupId = machine.opdb_id.split('-')[0];
@@ -24,9 +25,7 @@ export default function MachineCard({
   const manufacturer = machine.manufacturer?.name || 'Unknown';
   
   // Check if this machine group is already marked as "haven't played"
-  const isAlreadyMarked = userPreferences?.blockedMachines?.some(blockedId => 
-    groupId.startsWith(blockedId)
-  );
+  const isAlreadyMarked = isMachineBlocked?.(groupId) || false;
   
   const imageUrl = index === 0 ? imageStates.left.url : imageStates.right.url;
   const imageState = index === 0 ? imageStates.left : imageStates.right;
@@ -56,7 +55,6 @@ export default function MachineCard({
         userPreferences={userPreferences}
         handleHaventPlayed={handleHaventPlayed}
         matchup={matchup}
-        replaceMachine={replaceMachine}
         fetchMatchup={fetchMatchup}
       />
       

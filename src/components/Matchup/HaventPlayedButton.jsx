@@ -8,7 +8,6 @@ export default function HaventPlayedButton({
   userPreferences, 
   handleHaventPlayed, 
   matchup, 
-  replaceMachine, 
   fetchMatchup 
 }) {
   // Add mobile-specific debugging for state consistency
@@ -37,7 +36,7 @@ export default function HaventPlayedButton({
           e.stopPropagation();
           if (!isAlreadyMarked) {
             try {
-              await handleHaventPlayed(index, matchup, replaceMachine);
+              await handleHaventPlayed(index, matchup);
             } catch (err) {
               console.error('Failed to mark machine as haven\'t played:', err);
               // You could add a toast notification here for user feedback

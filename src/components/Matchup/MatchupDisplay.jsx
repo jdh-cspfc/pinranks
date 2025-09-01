@@ -11,7 +11,8 @@ export default function MatchupDisplay({
   handleVote, 
   handleHaventPlayed, 
   replaceMachine, 
-  fetchMatchup 
+  fetchMatchup,
+  isMachineBlocked
 }) {
   if (!matchup || !matchup.machines || matchup.machines.length < 2) {
     return null; // Removed loading box for testing
@@ -43,6 +44,7 @@ export default function MatchupDisplay({
           handleHaventPlayed={handleHaventPlayed}
           replaceMachine={replaceMachine}
           fetchMatchup={fetchMatchup}
+          isMachineBlocked={isMachineBlocked}
         />
       ))}
     </div>
