@@ -1,12 +1,13 @@
 import { useState, useEffect, useCallback } from 'react';
-import { fetchMachinesAndGroups } from '../utils/matchupApi';
+import { useAppData } from './useAppData';
 import { 
   filterMachinesByPreferences, 
   selectRandomMatchup 
 } from '../utils/matchupSelectors';
 import { replaceMachineInMatchup } from '../utils/matchupReplacement';
 
-export const useMatchupData = (filter, user, userPreferences) => {
+export const useMatchupData = (filter) => {
+  const { machines, groups, user, userPreferences } = useAppData();
   const [matchup, setMatchup] = useState(null);
   const [error, setError] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -33,21 +34,25 @@ export const useMatchupData = (filter, user, userPreferences) => {
 
   // Main function to fetch matchup data
   const fetchMatchup = useCallback(async (isFilterChange = false, isVoteChange = false) => {
+    if (!machines || !groups) {
+      setError('Machines and groups data not available');
+      return;
+    }
+
     try {
       setLoadingStates(isFilterChange, isVoteChange);
       
-      const { machinesData, groupsData } = await fetchMachinesAndGroups();
-      const filteredMachines = filterMachinesByPreferences(machinesData, filter, user, userPreferences);
-      const selectedMachines = selectRandomMatchup(filteredMachines, groupsData);
+      const filteredMachines = filterMachinesByPreferences(machines, filter, user, userPreferences);
+      const selectedMachines = selectRandomMatchup(filteredMachines, groups);
 
       setMatchup({
         machines: selectedMachines,
-        groups: groupsData,
+        groups: groups,
       });
       
       clearLoadingStates();
     } catch (err) {
-      console.error('Failed to fetch OPDB data:', err);
+      console.error('Failed to fetch matchup data:', err);
       console.error('Error details:', {
         message: err.message,
         stack: err.stack,
@@ -56,7 +61,7 @@ export const useMatchupData = (filter, user, userPreferences) => {
       setError(`Failed to load pinball machines: ${err.message}`);
       clearLoadingStates();
     }
-  }, [filter, user, userPreferences]);
+  }, [filter, user, userPreferences, machines, groups]);
 
   // Replace a specific machine with a new one
   const replaceMachine = useCallback(async (machineIndex) => {

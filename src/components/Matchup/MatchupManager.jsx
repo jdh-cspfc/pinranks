@@ -13,8 +13,8 @@ export default function MatchupManager() {
     // First, get user preferences (which includes user auth)
     const { user, userPreferences, userPreferencesLoaded, confirmationMessage, createHandleHaventPlayed } = useUserPreferences();
     
-    // Then, get matchup data using the user info
-    const { matchup, error, isLoading, isFiltering, isVoting, fetchMatchup, replaceMachine, setError } = useMatchupData(filter, user, userPreferences);
+    // Then, get matchup data using the centralized data
+    const { matchup, error, isLoading, isFiltering, isVoting, fetchMatchup, replaceMachine, setError } = useMatchupData(filter);
     
     // Create the handleHaventPlayed function with the replaceMachine dependency
     const handleHaventPlayed = createHandleHaventPlayed(replaceMachine);

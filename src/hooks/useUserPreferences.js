@@ -1,20 +1,20 @@
-import { useUserAuth } from './useUserAuth';
-import { useUserBlockedMachines } from './useUserBlockedMachines';
+import { useAppData } from './useAppData';
 import { useConfirmationMessage } from './useConfirmationMessage';
 import { UI_CONSTANTS } from '../constants/appConstants';
 
 export const useUserPreferences = () => {
-  const { user, isLoading: authLoading } = useUserAuth();
   const { 
-    blockedMachines, 
-    isLoaded: blockedMachinesLoaded, 
+    user, 
+    userPreferences, 
+    isLoading: authLoading, 
+    isUserDataLoading,
     addBlockedMachine, 
     isMachineBlocked 
-  } = useUserBlockedMachines(user);
+  } = useAppData();
   const { message: confirmationMessage, showMessage, clearMessage, cleanup } = useConfirmationMessage();
 
   // Combined loading state
-  const userPreferencesLoaded = !authLoading && blockedMachinesLoaded;
+  const userPreferencesLoaded = !authLoading && !isUserDataLoading;
 
   // Create a function that can be enhanced with replaceMachine later
   const createHandleHaventPlayed = (replaceMachine) => {
@@ -96,7 +96,7 @@ export const useUserPreferences = () => {
 
   return {
     user,
-    userPreferences: { blockedMachines, isMachineBlocked },
+    userPreferences: { blockedMachines: userPreferences.blockedMachines, isMachineBlocked },
     userPreferencesLoaded,
     confirmationMessage,
     createHandleHaventPlayed,

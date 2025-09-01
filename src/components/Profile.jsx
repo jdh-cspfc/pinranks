@@ -1,91 +1,25 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useDarkMode } from '../DarkModeContext';
-import { auth, db } from '../firebase';
 import { signOut } from 'firebase/auth';
-import { doc, getDoc, updateDoc, setDoc } from 'firebase/firestore';
-import TopBar from './TopBar';
-// import LoadingText from './LoadingText'; // Removed for testing
+import { auth } from '../firebase';
+import { useAppData } from '../hooks/useAppData';
 import Card from './Card';
-import { getCachedData } from '../caching';
 
 export default function Profile() {
   const { darkMode, setDarkMode } = useDarkMode();
-  const [user, setUser] = useState(null);
-  const [userPreferences, setUserPreferences] = useState({ blockedMachines: [] });
-  const [machinesData, setMachinesData] = useState([]);
-  const [groupsData, setGroupsData] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const { 
+    user, 
+    machines, 
+    groups, 
+    userPreferences, 
+    isLoading, 
+    refreshUserData 
+  } = useAppData();
+  
   const [showAllMachines, setShowAllMachines] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [hasLoadedAllData, setHasLoadedAllData] = useState(false);
-
-  // Load initial data (first 3 machines + essential data)
-  useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged(async (firebaseUser) => {
-      setUser(firebaseUser);
-      if (firebaseUser) {
-        try {
-          // Load user preferences
-          const userPrefsRef = doc(db, 'userPreferences', firebaseUser.uid);
-          const userPrefsSnap = await getDoc(userPrefsRef);
-          if (userPrefsSnap.exists()) {
-            setUserPreferences(userPrefsSnap.data());
-          }
-
-          // Load only essential data initially for faster rendering with caching
-          const [machines, groups] = await Promise.all([
-            getCachedData('machines', () => 
-              fetch('/machines.json').then(res => res.json()), 
-              604800_000 // 7 day cache
-            ),
-            getCachedData('groups', () => 
-              fetch('/groups.json').then(res => res.json()), 
-              604800_000 // 7 day cache
-            )
-          ]);
-          
-          // Set initial data
-          setMachinesData(machines);
-          setGroupsData(groups);
-          setIsLoading(false);
-          
-          // Load remaining data in background
-          setTimeout(() => {
-            loadRemainingData(machines, groups);
-          }, 100);
-          
-        } catch (err) {
-          console.error('Failed to load user data:', err);
-          setIsLoading(false);
-        }
-      } else {
-        setIsLoading(false);
-      }
-    });
-
-    return () => unsubscribe();
-  }, []);
-
-  // Load remaining data in background
-  const loadRemainingData = async (machines, groups) => {
-    if (hasLoadedAllData) return;
-    
-    try {
-      // Simulate a small delay to ensure the page has rendered
-      await new Promise(resolve => setTimeout(resolve, 50));
-      
-      // Update state to indicate all data is loaded
-      setHasLoadedAllData(true);
-    } catch (err) {
-      console.error('Failed to load remaining data:', err);
-    }
-  };
 
   const handleLogout = async () => {
-    if (TopBar.justClosedMenuRef && TopBar.justClosedMenuRef.current) {
-      TopBar.justClosedMenuRef.current = false;
-      return;
-    }
     try {
       await signOut(auth);
     } catch (err) {
@@ -96,177 +30,148 @@ export default function Profile() {
   const removeFromBlockedList = async (groupId) => {
     try {
       const newBlockedMachines = userPreferences.blockedMachines.filter(id => id !== groupId);
-      setUserPreferences(prev => ({ ...prev, blockedMachines: newBlockedMachines }));
       
-      const userPrefsRef = doc(db, 'userPreferences', user.uid);
-      await setDoc(userPrefsRef, {
-        blockedMachines: newBlockedMachines
-      }, { merge: true });
+      // Update user preferences through the centralized service
+      const { UserDataService } = await import('../services/dataService');
+      await UserDataService.updateUserPreferences(user.uid, { 
+        blockedMachines: newBlockedMachines 
+      });
+      
+      // Refresh user data to get updated preferences
+      await refreshUserData();
     } catch (err) {
       console.error('Failed to remove machine from blocked list:', err);
-      // Revert local state on error
-      setUserPreferences(prev => ({ ...prev, blockedMachines: userPreferences.blockedMachines }));
+      alert('Failed to remove machine. Please try again.');
     }
   };
 
-  const getMachineDisplayName = (groupId) => {
-    const group = groupsData.find(g => g.opdb_id === groupId);
-    return group?.name || `Machine ${groupId}`;
-  };
-
   if (isLoading) {
-    return null; // Removed loading box for testing
+    return (
+      <Card maxWidth="max-w-4xl">
+        <div className="text-center py-8">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
+          <p className="mt-2 text-gray-600">Loading profile...</p>
+        </div>
+      </Card>
+    );
   }
 
   if (!user) {
-    return null; // Removed loading box for testing
+    return (
+      <Card maxWidth="max-w-md">
+        <div className="text-center py-8">
+          <h2 className="text-xl font-bold mb-4">Please log in</h2>
+          <p className="text-gray-600">You need to be logged in to view your profile.</p>
+        </div>
+      </Card>
+    );
   }
 
+  // Filter machines based on search term
+  const filteredMachines = machines?.filter(machine => 
+    machine.name.toLowerCase().includes(searchTerm.toLowerCase())
+  ) || [];
+
+  // Get blocked machine names for display
+  const blockedMachineNames = userPreferences.blockedMachines.map(blockedId => {
+    const machine = machines?.find(m => m.opdb_id.startsWith(blockedId));
+    return machine ? machine.name : `Unknown (${blockedId})`;
+  });
+
   return (
-    <Card>
-      <h2 className="text-2xl font-bold mb-4 text-gray-900 dark:text-gray-100">Profile</h2>
-      
-      {/* Dark Mode Toggle */}
-      <div className="flex items-center justify-center gap-4 mb-6">
-        {/* Sun Icon */}
-        <svg className="w-6 h-6 text-yellow-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5" /><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" /></svg>
-        <label className="relative inline-flex items-center cursor-pointer">
-          <input
-            type="checkbox"
-            className="sr-only peer"
-            checked={darkMode}
-            onChange={e => setDarkMode(e.target.checked)}
-          />
-          <div className="w-14 h-8 bg-gray-200 dark:bg-gray-700 rounded-full peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-500 transition-colors peer-checked:bg-blue-600 flex items-center">
-            <div
-              className={`w-7 h-7 bg-white dark:bg-gray-900 rounded-full shadow transform transition-transform duration-200 ${darkMode ? 'translate-x-6' : 'translate-x-1'}`}
-            ></div>
-          </div>
-        </label>
-        {/* Moon Icon */}
-        <svg className="w-6 h-6 text-gray-500 dark:text-yellow-300" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z" /></svg>
-      </div>
-
-      <div className="border-t border-gray-200 dark:border-gray-700 w-full mb-6" />
-
-      {/* Haven't Played Section */}
-      <div className="mb-6">
-        <h3 className="text-lg font-semibold mb-3 text-gray-900 dark:text-gray-100">
-          Machines You Haven't Played
-        </h3>
-        
-        {userPreferences.blockedMachines?.length === 0 ? (
-          <p className="text-gray-500 dark:text-gray-400 text-sm">
-            You haven't marked any machines as "haven't played" yet. Use the "Haven't Played" button on machine cards to add them to this list.
-          </p>
-        ) : (
+    <Card maxWidth="max-w-4xl">
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="flex justify-between items-center">
           <div>
-            {/* Search/Filter Field */}
-            <div className="mb-3">
-                              <input
-                  type="text"
-                  placeholder="Search machines..."
-                  value={searchTerm}
-                  onChange={(e) => {
-                    setSearchTerm(e.target.value);
-                    // Reset to collapsed view when searching
-                    setShowAllMachines(false);
-                  }}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-            </div>
-
-            {/* Filtered machines */}
-            {(() => {
-              const filteredMachines = userPreferences.blockedMachines.filter(groupId => {
-                const group = groupsData.find(g => g.opdb_id === groupId);
-                return group?.name?.toLowerCase().includes(searchTerm.toLowerCase());
-              });
-
-              if (filteredMachines.length === 0 && searchTerm) {
-                return (
-                  <p className="text-gray-500 dark:text-gray-400 text-sm text-center py-4">
-                    No machines found matching "{searchTerm}"
-                  </p>
-                );
-              }
-
-              // Show first 3 machines as preview when not expanded
-              const machinesToShow = showAllMachines ? filteredMachines : filteredMachines.slice(0, 3);
-              
-
-              
-              return (
-                <>
-                  <div className="space-y-2 mb-3">
-                    {machinesToShow.map((groupId) => {
-                      const group = groupsData.find(g => g.opdb_id === groupId);
-                      const displayName = group?.name || `Machine ${groupId}`;
-                      
-                      // Find a machine that starts with this group ID to get manufacturer and year
-                      const machineData = machinesData.find(m => m.opdb_id.startsWith(groupId));
-                      const manufacturer = machineData?.manufacturer?.name;
-                      const year = machineData?.manufacture_date ? new Date(machineData.manufacture_date).getFullYear() : null;
-                      
-                      return (
-                        <div key={groupId} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded border border-gray-200 dark:border-gray-600">
-                          <div className="flex-1">
-                            <span className="text-gray-700 dark:text-gray-300">
-                              {displayName}
-                            </span>
-                            {(manufacturer || year) && (
-                              <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                {manufacturer && year ? `${manufacturer} • ${year}` : manufacturer || year}
-                              </div>
-                            )}
-                          </div>
-                          <button
-                            onClick={() => removeFromBlockedList(groupId)}
-                            className="px-2 py-1 text-xs bg-red-500 text-white rounded hover:bg-red-600 transition-colors ml-3"
-                          >
-                            Remove
-                          </button>
-                        </div>
-                      );
-                    })}
-                  </div>
-                  
-
-                  
-                  {/* Show "View All" button if more than 3 and not already expanded */}
-                  {!showAllMachines && filteredMachines.length > 3 && (
-                    <button 
-                      onClick={() => setShowAllMachines(true)}
-                      className="text-blue-600 dark:text-blue-400 text-sm hover:underline"
-                    >
-                      View All {filteredMachines.length} Machines
-                    </button>
-                  )}
-                  
-                  {/* Show "Show Less" button when expanded */}
-                  {showAllMachines && filteredMachines.length > 3 && (
-                    <button 
-                      onClick={() => setShowAllMachines(false)}
-                      className="text-blue-600 dark:text-blue-400 text-sm hover:underline"
-                    >
-                      Show Less
-                    </button>
-                  )}
-                </>
-              );
-            })()}
+            <h1 className="text-2xl font-bold">Profile</h1>
+            <p className="text-gray-600">Manage your preferences and blocked machines</p>
           </div>
-        )}
-      </div>
+          <button
+            onClick={handleLogout}
+            className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 transition-colors"
+          >
+            Logout
+          </button>
+        </div>
 
-      <div className="border-t border-gray-200 dark:border-gray-700 w-full mb-6" />
-      
-      <button
-        onClick={handleLogout}
-        className="bg-red-500 text-white px-4 py-2 rounded w-full max-w-xs mx-auto block"
-      >
-        Logout
-      </button>
+        {/* User Info */}
+        <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
+          <h2 className="text-lg font-semibold mb-2">Account Information</h2>
+          <p><strong>Email:</strong> {user.email}</p>
+          <p><strong>User ID:</strong> {user.uid}</p>
+        </div>
+
+        {/* Dark Mode Toggle */}
+        <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
+          <h2 className="text-lg font-semibold mb-2">Appearance</h2>
+          <label className="flex items-center space-x-2">
+            <input
+              type="checkbox"
+              checked={darkMode}
+              onChange={(e) => setDarkMode(e.target.checked)}
+              className="rounded"
+            />
+            <span>Dark Mode</span>
+          </label>
+        </div>
+
+        {/* Blocked Machines */}
+        <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
+          <h2 className="text-lg font-semibold mb-4">Haven't Played List</h2>
+          
+          {blockedMachineNames.length === 0 ? (
+            <p className="text-gray-600">No machines in your "Haven't Played" list.</p>
+          ) : (
+            <div className="space-y-2">
+              {blockedMachineNames.map((machineName, index) => {
+                const blockedId = userPreferences.blockedMachines[index];
+                return (
+                  <div key={blockedId} className="flex justify-between items-center bg-white dark:bg-gray-700 p-3 rounded border">
+                    <span>{machineName}</span>
+                    <button
+                      onClick={() => removeFromBlockedList(blockedId)}
+                      className="text-red-500 hover:text-red-700 text-sm"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Machine Search (for debugging) */}
+        <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
+          <h2 className="text-lg font-semibold mb-4">Machine Search</h2>
+          <input
+            type="text"
+            placeholder="Search machines..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full p-2 border rounded mb-4"
+          />
+          
+          <div className="max-h-60 overflow-y-auto">
+            {filteredMachines.slice(0, showAllMachines ? filteredMachines.length : 10).map(machine => (
+              <div key={machine.opdb_id} className="p-2 border-b last:border-b-0">
+                <div className="font-medium">{machine.name}</div>
+                <div className="text-sm text-gray-600">ID: {machine.opdb_id}</div>
+              </div>
+            ))}
+            
+            {filteredMachines.length > 10 && !showAllMachines && (
+              <button
+                onClick={() => setShowAllMachines(true)}
+                className="mt-2 text-blue-500 hover:text-blue-700"
+              >
+                Show all {filteredMachines.length} machines
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
     </Card>
   );
-} 
+}

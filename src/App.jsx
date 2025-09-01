@@ -1,12 +1,23 @@
 import React from 'react'
 import TopBar from './components/TopBar'
 import { DarkModeProvider } from './DarkModeContext'
-import { useAuthState } from './hooks/useAuthState'
+import { useAppData } from './hooks/useAppData'
 import { useAppNavigation } from './hooks/useAppNavigation.jsx'
+import { signOut } from 'firebase/auth'
+import { auth } from './firebase'
 
 export default function App() {
-  const { user, isLoading, hasCheckedAuth, handleLogout } = useAuthState()
+  const { user, isLoading } = useAppData()
+  const hasCheckedAuth = !isLoading
   const { activeView, setActiveView, mainContent } = useAppNavigation(user, hasCheckedAuth)
+  
+  const handleLogout = async () => {
+    try {
+      await signOut(auth)
+    } catch (error) {
+      console.error('Logout error:', error)
+    }
+  }
 
   return (
     <DarkModeProvider>
