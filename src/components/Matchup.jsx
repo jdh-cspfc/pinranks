@@ -33,6 +33,117 @@ function MachineImage({ machine, name, imageUrl, imageState }) {
   );
 }
 
+// Component to display machine header information
+function MachineHeader({ name, year, manufacturer }) {
+  return (
+    <>
+      <div className="w-full flex justify-center">
+        <h2 className="text-lg sm:text-xl font-bold mb-1 sm:mb-2 text-gray-900 dark:text-gray-100 break-words leading-tight text-center" style={{ maxWidth: 'calc(100% - 4rem)' }}>
+          {name}
+        </h2>
+      </div>
+      <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 mb-1 sm:mb-2 w-full">
+        <span>{year}</span>
+        <span className="mx-1">·</span>
+        <span>{manufacturer}</span>
+      </p>
+    </>
+  );
+}
+
+// Component to handle the "haven't played" button with all its complex logic
+function HaventPlayedButton({ 
+  index, 
+  isAlreadyMarked, 
+  groupId, 
+  userPreferences, 
+  handleHaventPlayed, 
+  matchup, 
+  replaceMachine, 
+  fetchMatchup 
+}) {
+  // Add mobile-specific debugging for state consistency
+  if (window.innerWidth < 640) {
+    console.log('Mobile: Machine card state check:', {
+      machineIndex: index,
+      groupId,
+      isAlreadyMarked,
+      blockedMachines: userPreferences?.blockedMachines,
+      currentTime: new Date().toISOString()
+    });
+    
+    // Log potential stuck machine scenarios
+    if (isAlreadyMarked) {
+      console.warn('Mobile: Rendering already-marked machine - this might indicate a stuck state:', {
+        groupId,
+        blockedMachines: userPreferences?.blockedMachines
+      });
+    }
+  }
+
+  return (
+    <div className="absolute top-0 right-0 w-11 h-11 sm:w-[75px] sm:h-[65px] flex items-center justify-center">
+      <button
+        onClick={async (e) => {
+          e.stopPropagation();
+          if (!isAlreadyMarked) {
+            try {
+              await handleHaventPlayed(index, matchup, replaceMachine);
+            } catch (err) {
+              console.error('Failed to mark machine as haven\'t played:', err);
+              // You could add a toast notification here for user feedback
+            }
+          } else {
+            // If machine is already marked but still visible, force a refresh
+            console.warn('Attempting to interact with already-marked machine, forcing refresh');
+            fetchMatchup(false, true);
+          }
+        }}
+        className={`haven-played-btn w-5 h-5 sm:w-[70px] sm:h-[60px] flex items-center justify-center rounded-full transition-colors z-10 ${
+          isAlreadyMarked
+            ? 'text-gray-400 dark:text-gray-500 cursor-pointer hover:text-red-600 dark:hover:text-red-400'
+            : 'text-red-600 dark:text-red-400 cursor-pointer'
+        }`}
+        title={isAlreadyMarked ? "Already marked - click to refresh" : "Mark as haven't played"}
+        disabled={false}
+        style={{
+          backgroundColor: 'transparent',
+          background: 'transparent',
+          WebkitTapHighlightColor: 'transparent'
+        }}
+      >
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M20 12H4" />
+        </svg>
+      </button>
+    </div>
+  );
+}
+
+// Component to handle machine image display with responsive layout
+function MachineImageContainer({ machine, name, imageUrl, imageState }) {
+  return (
+    <>
+      <div className="flex-1 flex items-center justify-center sm:hidden">
+        <MachineImage 
+          machine={machine} 
+          name={name} 
+          imageUrl={imageUrl}
+          imageState={imageState}
+        />
+      </div>
+      <div className="hidden sm:absolute sm:inset-0 sm:flex sm:items-center sm:justify-center">
+        <MachineImage 
+          machine={machine} 
+          name={name} 
+          imageUrl={imageUrl}
+          imageState={imageState}
+        />
+      </div>
+    </>
+  );
+}
+
 // Component to handle individual machine card display
 function MachineCard({ 
   machine, 
@@ -58,27 +169,6 @@ function MachineCard({
     groupId.startsWith(blockedId)
   );
   
-  // Add mobile-specific debugging for state consistency
-  if (window.innerWidth < 640) {
-    console.log('Mobile: Machine card state check:', {
-      machineIndex: index,
-      machineName: name,
-      groupId,
-      isAlreadyMarked,
-      blockedMachines: userPreferences?.blockedMachines,
-      currentTime: new Date().toISOString()
-    });
-    
-    // Log potential stuck machine scenarios
-    if (isAlreadyMarked) {
-      console.warn('Mobile: Rendering already-marked machine - this might indicate a stuck state:', {
-        machineName: name,
-        groupId,
-        blockedMachines: userPreferences?.blockedMachines
-      });
-    }
-  }
-  
   const imageUrl = index === 0 ? imageStates.left.url : imageStates.right.url;
   const imageState = index === 0 ? imageStates.left : imageStates.right;
 
@@ -99,69 +189,32 @@ function MachineCard({
         handleVote(index);
       }}
     >
-      {/* Haven't Played Button - Top Right Corner */}
-      <div className="absolute top-0 right-0 w-11 h-11 sm:w-[75px] sm:h-[65px] flex items-center justify-center">
-        <button
-          onClick={async (e) => {
-            e.stopPropagation();
-            if (!isAlreadyMarked) {
-              try {
-                await handleHaventPlayed(index, matchup, replaceMachine);
-              } catch (err) {
-                console.error('Failed to mark machine as haven\'t played:', err);
-                // You could add a toast notification here for user feedback
-              }
-            } else {
-              // If machine is already marked but still visible, force a refresh
-              console.warn('Attempting to interact with already-marked machine, forcing refresh');
-              fetchMatchup(false, true);
-            }
-          }}
-          className={`haven-played-btn w-5 h-5 sm:w-[70px] sm:h-[60px] flex items-center justify-center rounded-full transition-colors z-10 ${
-            isAlreadyMarked
-              ? 'text-gray-400 dark:text-gray-500 cursor-pointer hover:text-red-600 dark:hover:text-red-400'
-              : 'text-red-600 dark:text-red-400 cursor-pointer'
-          }`}
-          title={isAlreadyMarked ? "Already marked - click to refresh" : "Mark as haven't played"}
-          disabled={false}
-          style={{
-            backgroundColor: 'transparent',
-            background: 'transparent',
-            WebkitTapHighlightColor: 'transparent'
-          }}
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M20 12H4" />
-          </svg>
-        </button>
-      </div>
+      {/* Haven't Played Button */}
+      <HaventPlayedButton
+        index={index}
+        isAlreadyMarked={isAlreadyMarked}
+        groupId={groupId}
+        userPreferences={userPreferences}
+        handleHaventPlayed={handleHaventPlayed}
+        matchup={matchup}
+        replaceMachine={replaceMachine}
+        fetchMatchup={fetchMatchup}
+      />
       
-      <div className="w-full flex justify-center">
-        <h2 className="text-lg sm:text-xl font-bold mb-1 sm:mb-2 text-gray-900 dark:text-gray-100 break-words leading-tight text-center" style={{ maxWidth: 'calc(100% - 4rem)' }}>
-          {name}
-        </h2>
-      </div>
-      <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 mb-1 sm:mb-2 w-full">
-        <span>{year}</span>
-        <span className="mx-1">·</span>
-        <span>{manufacturer}</span>
-      </p>
-      <div className="flex-1 flex items-center justify-center sm:hidden">
-        <MachineImage 
-          machine={machine} 
-          name={name} 
-          imageUrl={imageUrl}
-          imageState={imageState}
-        />
-      </div>
-      <div className="hidden sm:absolute sm:inset-0 sm:flex sm:items-center sm:justify-center">
-        <MachineImage 
-          machine={machine} 
-          name={name} 
-          imageUrl={imageUrl}
-          imageState={imageState}
-        />
-      </div>
+      {/* Machine Header */}
+      <MachineHeader 
+        name={name}
+        year={year}
+        manufacturer={manufacturer}
+      />
+      
+      {/* Machine Image */}
+      <MachineImageContainer
+        machine={machine}
+        name={name}
+        imageUrl={imageUrl}
+        imageState={imageState}
+      />
     </div>
   );
 }
