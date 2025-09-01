@@ -1,0 +1,70 @@
+import React from 'react';
+
+// Component to handle the "haven't played" button with all its complex logic
+export default function HaventPlayedButton({ 
+  index, 
+  isAlreadyMarked, 
+  groupId, 
+  userPreferences, 
+  handleHaventPlayed, 
+  matchup, 
+  replaceMachine, 
+  fetchMatchup 
+}) {
+  // Add mobile-specific debugging for state consistency
+  if (window.innerWidth < 640) {
+    console.log('Mobile: Machine card state check:', {
+      machineIndex: index,
+      groupId,
+      isAlreadyMarked,
+      blockedMachines: userPreferences?.blockedMachines,
+      currentTime: new Date().toISOString()
+    });
+    
+    // Log potential stuck machine scenarios
+    if (isAlreadyMarked) {
+      console.warn('Mobile: Rendering already-marked machine - this might indicate a stuck state:', {
+        groupId,
+        blockedMachines: userPreferences?.blockedMachines
+      });
+    }
+  }
+
+  return (
+    <div className="absolute top-0 right-0 w-11 h-11 sm:w-[75px] sm:h-[65px] flex items-center justify-center">
+      <button
+        onClick={async (e) => {
+          e.stopPropagation();
+          if (!isAlreadyMarked) {
+            try {
+              await handleHaventPlayed(index, matchup, replaceMachine);
+            } catch (err) {
+              console.error('Failed to mark machine as haven\'t played:', err);
+              // You could add a toast notification here for user feedback
+            }
+          } else {
+            // If machine is already marked but still visible, force a refresh
+            console.warn('Attempting to interact with already-marked machine, forcing refresh');
+            fetchMatchup(false, true);
+          }
+        }}
+        className={`haven-played-btn w-5 h-5 sm:w-[70px] sm:h-[60px] flex items-center justify-center rounded-full transition-colors z-10 ${
+          isAlreadyMarked
+            ? 'text-gray-400 dark:text-gray-500 cursor-pointer hover:text-red-600 dark:hover:text-red-400'
+            : 'text-red-600 dark:text-red-400 cursor-pointer'
+        }`}
+        title={isAlreadyMarked ? "Already marked - click to refresh" : "Mark as haven't played"}
+        disabled={false}
+        style={{
+          backgroundColor: 'transparent',
+          background: 'transparent',
+          WebkitTapHighlightColor: 'transparent'
+        }}
+      >
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M20 12H4" />
+        </svg>
+      </button>
+    </div>
+  );
+}

@@ -374,6 +374,7 @@ export const useMatchupData = (filter, user, userPreferences) => {
     isVoting,
     fetchMatchup,
     replaceMachine,
+    setError,
     clearError: () => setError(null)
   };
 }; 
