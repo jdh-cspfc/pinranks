@@ -20,9 +20,6 @@ export async function getImageUrl(machine, size = 'large') {
   const backglass = machine.images.find(img => img.type === 'backglass');
   if (!backglass?.urls) return null;
   
-  const opdbUrl = backglass.urls[size] || backglass.urls.large || backglass.urls.medium;
-  if (!opdbUrl) return null;
-  
   // Create cache key
   const cacheKey = `${machine.opdb_id}-${size}`;
   
@@ -39,14 +36,16 @@ export async function getImageUrl(machine, size = 'large') {
       return localUrl;
     }
     
-    // Fall back to OPDB URL
-    imageUrlCache.set(cacheKey, opdbUrl);
-    return opdbUrl;
+    // OPDB fallback disabled for testing to avoid overusing their servers
+    // Only return Firebase images during testing
+    console.log(`No Firebase image found for ${machine.opdb_id}, OPDB fallback disabled for testing`);
+    imageUrlCache.set(cacheKey, null);
+    return null;
   } catch (error) {
     console.warn(`Failed to resolve image URL for ${machine.opdb_id}:`, error);
-    // Fall back to OPDB URL
-    imageUrlCache.set(cacheKey, opdbUrl);
-    return opdbUrl;
+    // OPDB fallback disabled for testing
+    imageUrlCache.set(cacheKey, null);
+    return null;
   }
 }
 

@@ -193,45 +193,55 @@ function selectBestMachineForGroup(groupId, machinesData, groupName) {
   }
 
 
-  // ✅ Fetches both machines and groups, used by initial load and after votes
-const fetchMatchup = async (isFilterChange = false, isVoteChange = false) => {
-  try {
-    if (isFilterChange) {
-      setIsFiltering(true);
-    } else if (isVoteChange) {
-      setIsVoting(true);
-    } else {
-      setIsLoading(true);
-    }
-    
-    // Helper function to fetch with retry
-    const fetchWithRetry = async (url, retries = 3) => {
-      for (let i = 0; i < retries; i++) {
-        try {
-          const response = await fetch(url);
-          if (!response.ok) {
-            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-          }
-          const data = await response.json();
-          return data;
-        } catch (err) {
-          if (i === retries - 1) throw err;
-          // Wait a bit before retrying
-          await new Promise(resolve => setTimeout(resolve, 1000));
-        }
-      }
-    };
-    
-    // Try to fetch both files with caching
-    const machinesData = await getCachedData('machines', () => 
-      fetchWithRetry('/machines.json'), 
-      604800_000 // 7 day cache
-    );
-    const groupsData = await getCachedData('groups', () => 
-      fetchWithRetry('/groups.json'), 
-      604800_000 // 7 day cache
-    );
+  // ✅ Helper to extract display data using group name
+  function getDisplayInfo(machine, groups) {
+    const groupId = machine.opdb_id.split('-')[0]
+    const group = groups.find(g => g.opdb_id === groupId)
 
+    return {
+      id: groupId,
+      name: group?.name || machine.name,
+      year: machine.manufacture_date?.slice(0, 4) || 'Unknown',
+      manufacturer: machine.manufacturer?.name || 'Unknown',
+    }
+  }
+
+  // Helper function to fetch with retry
+  const fetchWithRetry = async (url, retries = 3) => {
+    for (let i = 0; i < retries; i++) {
+      try {
+        const response = await fetch(url);
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        const data = await response.json();
+        return data;
+      } catch (err) {
+        if (i === retries - 1) throw err;
+        // Wait a bit before retrying
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+    }
+  };
+
+  // Helper to fetch machines and groups data with caching
+  const fetchMachinesAndGroups = async () => {
+    const [machinesData, groupsData] = await Promise.all([
+      getCachedData('machines', () => 
+        fetchWithRetry('/machines.json'), 
+        604800_000 // 7 day cache
+      ),
+      getCachedData('groups', () => 
+        fetchWithRetry('/groups.json'), 
+        604800_000 // 7 day cache
+      ),
+    ]);
+    
+    return { machinesData, groupsData };
+  };
+
+  // Helper to filter machines based on blocked manufacturers and user preferences
+  const filterMachinesByPreferences = (machinesData, filter, user, userPreferences) => {
     const blockedManufacturers = [
       "Mac Pinball",
       "Maguinas",
@@ -257,6 +267,11 @@ const fetchMatchup = async (isFilterChange = false, isVoteChange = false) => {
       );
     }
 
+    return filteredMachines;
+  };
+
+  // Helper to select random matchup from filtered machines and groups
+  const selectRandomMatchup = (filteredMachines, groupsData) => {
     // Find all group IDs that have at least one machine in the filtered pool
     const groupIdsWithMachines = new Set(filteredMachines.map(m => m.opdb_id.split('-')[0]));
     const validGroups = groupsData.filter(g => groupIdsWithMachines.has(g.opdb_id));
@@ -268,13 +283,42 @@ const fetchMatchup = async (isFilterChange = false, isVoteChange = false) => {
       selectBestMachineForGroup(group.opdb_id, filteredMachines, group.name)
     );
 
+    return selectedMachines;
+  };
+
+  // Helper to handle loading states
+  const setLoadingStates = (isFilterChange, isVoteChange, setIsLoading, setIsFiltering, setIsVoting) => {
+    if (isFilterChange) {
+      setIsFiltering(true);
+    } else if (isVoteChange) {
+      setIsVoting(true);
+    } else {
+      setIsLoading(true);
+    }
+  };
+
+  // Helper to clear loading states
+  const clearLoadingStates = (setIsLoading, setIsFiltering, setIsVoting) => {
+    setIsLoading(false);
+    setIsFiltering(false);
+    setIsVoting(false);
+  };
+
+// ✅ Fetches both machines and groups, used by initial load and after votes
+const fetchMatchup = async (isFilterChange = false, isVoteChange = false) => {
+  try {
+    setLoadingStates(isFilterChange, isVoteChange, setIsLoading, setIsFiltering, setIsVoting);
+    
+    const { machinesData, groupsData } = await fetchMachinesAndGroups();
+    const filteredMachines = filterMachinesByPreferences(machinesData, filter, user, userPreferences);
+    const selectedMachines = selectRandomMatchup(filteredMachines, groupsData);
+
     setMatchup({
       machines: selectedMachines,
       groups: groupsData,
     });
-    setIsLoading(false);
-    setIsFiltering(false);
-    setIsVoting(false);
+    
+    clearLoadingStates(setIsLoading, setIsFiltering, setIsVoting);
   } catch (err) {
     console.error('Failed to fetch OPDB data:', err);
     console.error('Error details:', {
@@ -283,9 +327,7 @@ const fetchMatchup = async (isFilterChange = false, isVoteChange = false) => {
       name: err.name
     });
     setError(`Failed to load pinball machines: ${err.message}`);
-    setIsLoading(false);
-    setIsFiltering(false);
-    setIsVoting(false);
+    clearLoadingStates(setIsLoading, setIsFiltering, setIsVoting);
   }
 };
 
@@ -525,23 +567,6 @@ const fetchMatchup = async (isFilterChange = false, isVoteChange = false) => {
       }
     }
   }, [userPreferences?.blockedMachines]); // Only depend on preferences, not machines
-
-  // ✅ Helper to extract display data using group name
-async function getDisplayInfo(machine, groups) {
-  const groupId = machine.opdb_id.split('-')[0]
-  const group = groups.find(g => g.opdb_id === groupId)
-
-  // Use the new image utility to get the best available image URL
-  const imageUrl = await getImageUrl(machine, 'large')
-
-  return {
-    id: groupId,
-    name: group?.name || machine.name,
-    image: imageUrl,
-    year: machine.manufacture_date?.slice(0, 4) || 'Unknown',
-    manufacturer: machine.manufacturer?.name || 'Unknown',
-  }
-}
 
   // ✅ Handle user vote
   const handleVote = async (winnerIndex) => {
