@@ -1,11 +1,6 @@
-// Helper to get filter group for a machine
-export const getFilterGroup = (display) => {
-  if (display === 'reels' || display === 'lights') return 'EM';
-  if (display === 'alphanumeric') return 'Solid State';
-  if (display === 'dmd') return 'DMD';
-  if (display === 'lcd') return 'LCD';
-  return null;
-};
+// Import and re-export getFilterGroup from shared utilities
+import { getFilterGroup } from './filterUtils.js';
+export { getFilterGroup };
 
 // Blocked manufacturers list
 export const BLOCKED_MANUFACTURERS = [

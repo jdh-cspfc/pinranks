@@ -145,25 +145,8 @@ async function downloadMachineImages(machine) {
   }
 }
 
-function getFilterGroup(display) {
-  if (display === 'reels' || display === 'lights') return 'EM';
-  if (display === 'alphanumeric') return 'Solid State';
-  if (display === 'dmd') return 'DMD';
-  if (display === 'lcd') return 'LCD';
-  return null;
-}
-
-function filterMachinesByPriority(machines, priority) {
-  if (priority === 'all') return machines;
-  
-  return machines.filter(machine => {
-    const group = getFilterGroup(machine.display);
-    if (priority === 'modern') {
-      return group === 'LCD' || group === 'DMD';
-    }
-    return group === priority.toUpperCase();
-  });
-}
+// Import shared filter utilities
+import { getFilterGroup, filterMachinesByPriority } from '../src/utils/filterUtils.js';
 
 async function main() {
   console.log(`🚀 Starting image download process...`);

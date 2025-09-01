@@ -5,7 +5,7 @@ import { useUserPreferences } from '../../hooks/useUserPreferences';
 import { processVote } from '../../services/votingService';
 import FilterButtons from './FilterButtons';
 import MachineCard from './MachineCard';
-import { getFilterGroup } from '../../utils/matchupSelectors';
+import { getFilterGroup } from '../../utils/filterUtils';
 
 export default function MatchupContainer() {
   try {

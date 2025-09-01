@@ -3,17 +3,10 @@ import { db, auth } from '../firebase';
 import { doc, getDoc } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
 import { getCachedData } from '../caching';
-import { getFilterGroup } from '../utils/matchupSelectors';
+import { getFilterGroup } from '../utils/filterUtils';
+import { FILTER_OPTIONS } from '../constants/filters';
 // import LoadingText from './LoadingText'; // Removed for testing
 import Card from './Card';
-
-const FILTERS = [
-  { label: 'All', value: 'All' },
-  { label: 'EM', value: 'EM' },
-  { label: 'Solid State', value: 'Solid State' },
-  { label: 'DMD', value: 'DMD' },
-  { label: 'LCD', value: 'LCD' },
-];
 
 function LoadingSpinner({ size = 'md', className = '' }) {
   const sizeClasses = {
@@ -235,7 +228,7 @@ export default function Rankings() {
       {/* Tabs */}
       <div className="flex justify-center mt-3 mb-6">
         <div className="inline-flex shadow-sm gap-0">
-          {FILTERS.map((f, idx, arr) => (
+          {FILTER_OPTIONS.map((f, idx, arr) => (
             <button
               key={f.value}
               className={`px-2 py-1 md:px-4 md:py-2 border text-sm md:text-sm font-medium transition-colors whitespace-nowrap

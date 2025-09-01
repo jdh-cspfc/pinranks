@@ -1,12 +1,5 @@
 import React, { useMemo, useCallback } from 'react';
-
-const FILTERS = [
-  { label: 'All', value: 'All' },
-  { label: 'EM', value: 'EM' },
-  { label: 'Solid State', value: 'Solid State' },
-  { label: 'DMD', value: 'DMD' },
-  { label: 'LCD', value: 'LCD' },
-];
+import { FILTER_OPTIONS } from '../../constants/filters';
 
 export default function FilterButtons({ filter, onFilterChange }) {
   const handleFilterClick = useCallback((value) => {
@@ -40,7 +33,7 @@ export default function FilterButtons({ filter, onFilterChange }) {
         All
       </button>
       <div className="inline-flex shadow-sm gap-0">
-        {FILTERS.filter(f => f.value !== 'All').map((f, idx, arr) => (
+        {FILTER_OPTIONS.filter(f => f.value !== 'All').map((f, idx, arr) => (
           <button
             key={f.value}
             className={`px-2 py-1 sm:px-4 sm:py-2 border text-sm sm:text-sm font-medium transition-colors whitespace-nowrap
