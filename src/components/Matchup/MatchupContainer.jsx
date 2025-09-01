@@ -7,14 +7,7 @@ import { useUserPreferences } from '../../hooks/useUserPreferences';
 import FilterButtons from './FilterButtons';
 import MachineCard from './MachineCard';
 
-// Helper function to get filter group for a machine
-function getFilterGroup(display) {
-  if (display === 'reels' || display === 'lights') return 'EM';
-  if (display === 'alphanumeric') return 'Solid State';
-  if (display === 'dmd') return 'DMD';
-  if (display === 'lcd') return 'LCD';
-  return null;
-}
+import { getFilterGroup } from '../../utils/matchupSelectors';
 
 // Elo rating calculation
 function calculateElo(winnerScore, loserScore, k = 32) {

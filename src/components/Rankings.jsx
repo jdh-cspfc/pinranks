@@ -3,6 +3,7 @@ import { db, auth } from '../firebase';
 import { doc, getDoc } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
 import { getCachedData } from '../caching';
+import { getFilterGroup } from '../utils/matchupSelectors';
 // import LoadingText from './LoadingText'; // Removed for testing
 import Card from './Card';
 
@@ -13,14 +14,6 @@ const FILTERS = [
   { label: 'DMD', value: 'DMD' },
   { label: 'LCD', value: 'LCD' },
 ];
-
-function getFilterGroup(display) {
-  if (display === 'reels' || display === 'lights') return 'EM';
-  if (display === 'alphanumeric') return 'Solid State';
-  if (display === 'dmd') return 'DMD';
-  if (display === 'lcd') return 'LCD';
-  return null;
-}
 
 function LoadingSpinner({ size = 'md', className = '' }) {
   const sizeClasses = {
