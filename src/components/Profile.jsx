@@ -36,11 +36,11 @@ export default function Profile() {
           const [machines, groups] = await Promise.all([
             getCachedData('machines', () => 
               fetch('/machines.json').then(res => res.json()), 
-              3600_000 // 1 hour cache
+              604800_000 // 7 day cache
             ),
             getCachedData('groups', () => 
               fetch('/groups.json').then(res => res.json()), 
-              3600_000 // 1 hour cache
+              604800_000 // 7 day cache
             )
           ]);
           

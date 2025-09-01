@@ -4,7 +4,7 @@
 const memoryCache = {};
 
 // Get data from cache or fetch if not present/stale
-export async function getCachedData(key, fetchFn, maxAgeMs = 3600_000) {
+export async function getCachedData(key, fetchFn, maxAgeMs = 604800_000) {
   // 1. Check in-memory cache
   if (memoryCache[key] && Date.now() - memoryCache[key].timestamp < maxAgeMs) {
     return memoryCache[key].data;

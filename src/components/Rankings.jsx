@@ -75,10 +75,10 @@ export default function Rankings() {
 
   useEffect(() => {
     // Fetch machines.json and groups.json with caching
-    getCachedData('machines', () => fetch('/machines.json').then(res => res.json()), 3600_000)
+            getCachedData('machines', () => fetch('/machines.json').then(res => res.json()), 604800_000)
       .then(setMachines)
       .catch(() => setMachines([]));
-    getCachedData('groups', () => fetch('/groups.json').then(res => res.json()), 3600_000)
+            getCachedData('groups', () => fetch('/groups.json').then(res => res.json()), 604800_000)
       .then(setGroups)
       .catch(() => setGroups([]));
   }, []);

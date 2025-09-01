@@ -225,11 +225,11 @@ const fetchMatchup = async (isFilterChange = false, isVoteChange = false) => {
     // Try to fetch both files with caching
     const machinesData = await getCachedData('machines', () => 
       fetchWithRetry('/machines.json'), 
-      3600_000 // 1 hour cache
+      604800_000 // 7 day cache
     );
     const groupsData = await getCachedData('groups', () => 
       fetchWithRetry('/groups.json'), 
-      3600_000 // 1 hour cache
+      604800_000 // 7 day cache
     );
 
     const blockedManufacturers = [
@@ -631,13 +631,13 @@ async function getDisplayInfo(machine, groups) {
             throw new Error(`HTTP ${res.status}: ${res.statusText}`);
           }
           return res.json();
-        }), 3600_000),
+        }), 604800_000),
         getCachedData('groups', () => fetch('/groups.json').then(res => {
           if (!res.ok) {
             throw new Error(`HTTP ${res.status}: ${res.statusText}`);
           }
           return res.json();
-        }), 3600_000),
+        }), 604800_000),
       ]);
 
       const blockedManufacturers = [
