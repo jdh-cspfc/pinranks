@@ -1,22 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { db } from '../../firebase';
-import { collection, addDoc, serverTimestamp, doc, runTransaction } from 'firebase/firestore';
 import { useMatchupData } from '../../hooks/useMatchupData';
 import { useImageLoading } from '../../hooks/useImageLoading';
 import { useUserPreferences } from '../../hooks/useUserPreferences';
+import { processVote } from '../../services/votingService';
 import FilterButtons from './FilterButtons';
 import MachineCard from './MachineCard';
-
 import { getFilterGroup } from '../../utils/matchupSelectors';
-
-// Elo rating calculation
-function calculateElo(winnerScore, loserScore, k = 32) {
-  const expectedWin = 1 / (1 + Math.pow(10, (loserScore - winnerScore) / 400));
-  const expectedLose = 1 / (1 + Math.pow(10, (winnerScore - loserScore) / 400));
-  const newWinner = winnerScore + k * (1 - expectedWin);
-  const newLoser = loserScore + k * (0 - expectedLose);
-  return [Math.round(newWinner), Math.round(newLoser)];
-}
 
 export default function MatchupContainer() {
   try {
@@ -50,74 +39,7 @@ export default function MatchupContainer() {
       }, 150);
     }, []);
 
-    // Save vote to Firestore
-    const saveVoteToFirestore = useCallback(async (winnerId, loserId) => {
-      try {
-        await addDoc(collection(db, 'userVotes'), {
-          userId: user.uid,
-          winnerId,
-          loserId,
-          timestamp: serverTimestamp(),
-        });
-      } catch (err) {
-        console.error('Failed to save vote:', {
-          userId: user.uid,
-          winnerId,
-          loserId,
-          error: err.message
-        });
-        throw err;
-      }
-    }, [user]);
 
-    // Update Elo rankings with transaction
-    const updateEloRankings = useCallback(async (winnerId, loserId, winnerGroup, loserGroup) => {
-      const rankingsRef = doc(db, 'userRankings', user.uid);
-      const baseScore = 1200;
-
-      try {
-        await runTransaction(db, async (transaction) => {
-          const rankingsSnap = await transaction.get(rankingsRef);
-          let rankings = rankingsSnap.exists() ? rankingsSnap.data().rankings : {};
-          
-          // Helper to get or initialize Elo object
-          const getEloObj = (obj) => obj && typeof obj === 'object' ? { ...obj } : { all: obj ?? baseScore };
-          const winnerElo = getEloObj(rankings[winnerId]);
-          const loserElo = getEloObj(rankings[loserId]);
-          
-          // Always update 'all' Elo
-          const [newWinnerAll, newLoserAll] = calculateElo(winnerElo.all ?? baseScore, loserElo.all ?? baseScore);
-          winnerElo.all = newWinnerAll;
-          loserElo.all = newLoserAll;
-          
-          // Update filter-specific Elo if both are in the same group
-          if (winnerGroup && winnerGroup === loserGroup) {
-            const [newWinnerF, newLoserF] = calculateElo(
-              winnerElo[winnerGroup] ?? baseScore,
-              loserElo[winnerGroup] ?? baseScore
-            );
-            winnerElo[winnerGroup] = newWinnerF;
-            loserElo[winnerGroup] = newLoserF;
-          }
-          
-          rankings = {
-            ...rankings,
-            [winnerId]: winnerElo,
-            [loserId]: loserElo,
-          };
-          
-          transaction.set(rankingsRef, { rankings }, { merge: true });
-        });
-      } catch (err) {
-        console.error('Failed to update Elo rankings:', {
-          userId: user.uid,
-          winnerId,
-          loserId,
-          error: err.message
-        });
-        throw err;
-      }
-    }, [user]);
 
     // Main vote handler - orchestrates the voting process
     const handleVote = useCallback(async (winnerIndex) => {
@@ -141,8 +63,7 @@ export default function MatchupContainer() {
       // Save vote and update rankings in background
       (async () => {
         try {
-          await saveVoteToFirestore(winnerId, loserId);
-          await updateEloRankings(winnerId, loserId, winnerGroup, loserGroup);
+          await processVote(user.uid, winnerId, loserId, winnerGroup, loserGroup);
         } catch (err) {
           // Fail silently for user, but log for debugging
           console.error('Vote process failed:', {
@@ -153,7 +74,7 @@ export default function MatchupContainer() {
           });
         }
       })();
-    }, [user, matchup, handleVoteClick, saveVoteToFirestore, updateEloRankings, fetchMatchup]);
+    }, [user, matchup, handleVoteClick, fetchMatchup]);
 
     if (error) {
       return <div className="text-red-600">{error}</div>;
