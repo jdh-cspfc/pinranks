@@ -1,6 +1,7 @@
 import { useUserAuth } from './useUserAuth';
 import { useUserBlockedMachines } from './useUserBlockedMachines';
 import { useConfirmationMessage } from './useConfirmationMessage';
+import { UI_CONSTANTS } from '../constants/appConstants';
 
 export const useUserPreferences = () => {
   const { user, isLoading: authLoading } = useUserAuth();
@@ -23,7 +24,7 @@ export const useUserPreferences = () => {
         const groupId = machine.opdb_id.split('-')[0];
         
         // Add mobile-specific debugging
-        const isMobile = window.innerWidth < 640; // sm breakpoint
+        const isMobile = window.innerWidth < UI_CONSTANTS.MOBILE_BREAKPOINT;
         console.log('handleHaventPlayed called:', {
           machineIndex,
           machineName: machine.name,
@@ -41,7 +42,7 @@ export const useUserPreferences = () => {
         
         // Add a small delay on mobile to ensure state updates are processed
         if (isMobile) {
-          await new Promise(resolve => setTimeout(resolve, 100));
+          await new Promise(resolve => setTimeout(resolve, UI_CONSTANTS.MOBILE_DELAY));
         }
         
         // Replace just the blocked machine with a new one

@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { processVote } from '../services/votingService';
 import { getFilterGroup } from '../utils/filterUtils';
+import { UI_CONSTANTS } from '../constants/appConstants';
 
 export const useVoting = (user, matchup, fetchMatchup, setError) => {
   const [clickedCard, setClickedCard] = useState(null);
@@ -10,7 +11,7 @@ export const useVoting = (user, matchup, fetchMatchup, setError) => {
     setClickedCard(winnerIndex);
     setTimeout(() => {
       setClickedCard(null);
-    }, 150);
+    }, UI_CONSTANTS.VOTE_CLICK_DURATION);
   }, []);
 
   // Main vote handler - orchestrates the voting process

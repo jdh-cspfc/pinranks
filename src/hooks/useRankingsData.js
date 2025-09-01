@@ -3,6 +3,7 @@ import { db, auth } from '../firebase';
 import { doc, getDoc } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
 import { getCachedData } from '../caching';
+import { CACHE_DURATION } from '../constants/appConstants';
 
 /**
  * Custom hook for managing rankings data fetching and state
@@ -24,13 +25,11 @@ export const useRankingsData = () => {
 
   // Fetch machines and groups data with caching
   useEffect(() => {
-    const CACHE_DURATION = 604800000; // 7 days in milliseconds
-    
-    getCachedData('machines', () => fetch('/machines.json').then(res => res.json()), CACHE_DURATION)
+    getCachedData('machines', () => fetch('/machines.json').then(res => res.json()), CACHE_DURATION.SEVEN_DAYS)
       .then(setMachines)
       .catch(() => setMachines([]));
       
-    getCachedData('groups', () => fetch('/groups.json').then(res => res.json()), CACHE_DURATION)
+    getCachedData('groups', () => fetch('/groups.json').then(res => res.json()), CACHE_DURATION.SEVEN_DAYS)
       .then(setGroups)
       .catch(() => setGroups([]));
   }, []);
