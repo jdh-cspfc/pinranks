@@ -33,6 +33,139 @@ function MachineImage({ machine, name, imageUrl, imageState }) {
   );
 }
 
+// Component to handle individual machine card display
+function MachineCard({ 
+  machine, 
+  index, 
+  matchup, 
+  imageStates, 
+  clickedCard, 
+  userPreferences, 
+  handleVote, 
+  handleHaventPlayed, 
+  replaceMachine, 
+  fetchMatchup 
+}) {
+  const isClicked = clickedCard === index;
+  const groupId = machine.opdb_id.split('-')[0];
+  const group = matchup.groups.find(g => g.opdb_id === groupId);
+  const name = group?.name || machine.name;
+  const year = machine.manufacture_date?.slice(0, 4) || 'Unknown';
+  const manufacturer = machine.manufacturer?.name || 'Unknown';
+  
+  // Check if this machine group is already marked as "haven't played"
+  const isAlreadyMarked = userPreferences?.blockedMachines?.some(blockedId => 
+    groupId.startsWith(blockedId)
+  );
+  
+  // Add mobile-specific debugging for state consistency
+  if (window.innerWidth < 640) {
+    console.log('Mobile: Machine card state check:', {
+      machineIndex: index,
+      machineName: name,
+      groupId,
+      isAlreadyMarked,
+      blockedMachines: userPreferences?.blockedMachines,
+      currentTime: new Date().toISOString()
+    });
+    
+    // Log potential stuck machine scenarios
+    if (isAlreadyMarked) {
+      console.warn('Mobile: Rendering already-marked machine - this might indicate a stuck state:', {
+        machineName: name,
+        groupId,
+        blockedMachines: userPreferences?.blockedMachines
+      });
+    }
+  }
+  
+  const imageUrl = index === 0 ? imageStates.left.url : imageStates.right.url;
+  const imageState = index === 0 ? imageStates.left : imageStates.right;
+
+  return (
+    <div
+      key={`${groupId}-${index}-${machine.opdb_id}`}
+      className={`border p-3 sm:p-4 rounded shadow bg-white dark:bg-gray-800 text-center border-gray-200 dark:border-gray-700 flex flex-col items-center flex-1 sm:h-[70vh] overflow-auto cursor-pointer sm:hover:shadow-lg sm:hover:bg-blue-50 dark:sm:hover:bg-gray-700 transition-all duration-100 ease-out relative ${
+        isClicked 
+          ? 'scale-[0.98] sm:bg-blue-50 dark:sm:hover:bg-gray-600' 
+          : 'scale-100'
+      }`}
+      style={{ minHeight: 0 }}
+      onClick={() => {
+        if (TopBar.justClosedMenuRef && TopBar.justClosedMenuRef.current) {
+          TopBar.justClosedMenuRef.current = false;
+          return;
+        }
+        handleVote(index);
+      }}
+    >
+      {/* Haven't Played Button - Top Right Corner */}
+      <div className="absolute top-0 right-0 w-11 h-11 sm:w-[75px] sm:h-[65px] flex items-center justify-center">
+        <button
+          onClick={async (e) => {
+            e.stopPropagation();
+            if (!isAlreadyMarked) {
+              try {
+                await handleHaventPlayed(index, matchup, replaceMachine);
+              } catch (err) {
+                console.error('Failed to mark machine as haven\'t played:', err);
+                // You could add a toast notification here for user feedback
+              }
+            } else {
+              // If machine is already marked but still visible, force a refresh
+              console.warn('Attempting to interact with already-marked machine, forcing refresh');
+              fetchMatchup(false, true);
+            }
+          }}
+          className={`haven-played-btn w-5 h-5 sm:w-[70px] sm:h-[60px] flex items-center justify-center rounded-full transition-colors z-10 ${
+            isAlreadyMarked
+              ? 'text-gray-400 dark:text-gray-500 cursor-pointer hover:text-red-600 dark:hover:text-red-400'
+              : 'text-red-600 dark:text-red-400 cursor-pointer'
+          }`}
+          title={isAlreadyMarked ? "Already marked - click to refresh" : "Mark as haven't played"}
+          disabled={false}
+          style={{
+            backgroundColor: 'transparent',
+            background: 'transparent',
+            WebkitTapHighlightColor: 'transparent'
+          }}
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M20 12H4" />
+          </svg>
+        </button>
+      </div>
+      
+      <div className="w-full flex justify-center">
+        <h2 className="text-lg sm:text-xl font-bold mb-1 sm:mb-2 text-gray-900 dark:text-gray-100 break-words leading-tight text-center" style={{ maxWidth: 'calc(100% - 4rem)' }}>
+          {name}
+        </h2>
+      </div>
+      <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 mb-1 sm:mb-2 w-full">
+        <span>{year}</span>
+        <span className="mx-1">·</span>
+        <span>{manufacturer}</span>
+      </p>
+      <div className="flex-1 flex items-center justify-center sm:hidden">
+        <MachineImage 
+          machine={machine} 
+          name={name} 
+          imageUrl={imageUrl}
+          imageState={imageState}
+        />
+      </div>
+      <div className="hidden sm:absolute sm:inset-0 sm:flex sm:items-center sm:justify-center">
+        <MachineImage 
+          machine={machine} 
+          name={name} 
+          imageUrl={imageUrl}
+          imageState={imageState}
+        />
+      </div>
+    </div>
+  );
+}
+
 
 
 // Skeleton loader component removed for testing
@@ -358,124 +491,22 @@ function selectBestMachineForGroup(groupId, machinesData, groupName) {
       ) : (
         <>
           <div className={`flex flex-col sm:grid sm:grid-cols-2 gap-3 sm:gap-6 ${isVoting ? 'opacity-75 pointer-events-none' : ''}`} style={{ height: 'calc(87vh - 110px)' }}>
-          {validMachines.map((machine, i) => {
-            const isClicked = clickedCard === i;
-            const groupId = machine.opdb_id.split('-')[0];
-            const group = matchup.groups.find(g => g.opdb_id === groupId);
-            const name = group?.name || machine.name;
-            const year = machine.manufacture_date?.slice(0, 4) || 'Unknown';
-            const manufacturer = machine.manufacturer?.name || 'Unknown';
-            
-            // Check if this machine group is already marked as "haven't played"
-            const isAlreadyMarked = userPreferences?.blockedMachines?.some(blockedId => 
-              groupId.startsWith(blockedId)
-            );
-            
-                  // Add mobile-specific debugging for state consistency
-      if (window.innerWidth < 640) {
-        console.log('Mobile: Machine card state check:', {
-          machineIndex: i,
-          machineName: name,
-          groupId,
-          isAlreadyMarked,
-          blockedMachines: userPreferences?.blockedMachines,
-          currentTime: new Date().toISOString()
-        });
-        
-        // Log potential stuck machine scenarios
-        if (isAlreadyMarked) {
-          console.warn('Mobile: Rendering already-marked machine - this might indicate a stuck state:', {
-            machineName: name,
-            groupId,
-            blockedMachines: userPreferences?.blockedMachines
-          });
-        }
-      }
-            
-            return (
-              <div
-                key={`${groupId}-${i}-${machine.opdb_id}`}
-                className={`border p-3 sm:p-4 rounded shadow bg-white dark:bg-gray-800 text-center border-gray-200 dark:border-gray-700 flex flex-col items-center flex-1 sm:h-[70vh] overflow-auto cursor-pointer sm:hover:shadow-lg sm:hover:bg-blue-50 dark:sm:hover:bg-gray-700 transition-all duration-100 ease-out relative ${
-                  isClicked 
-                    ? 'scale-[0.98] sm:bg-blue-50 dark:sm:hover:bg-gray-600' 
-                    : 'scale-100'
-                }`}
-                style={{ minHeight: 0 }}
-                onClick={() => {
-                  if (TopBar.justClosedMenuRef && TopBar.justClosedMenuRef.current) {
-                    TopBar.justClosedMenuRef.current = false;
-                    return;
-                  }
-                  handleVote(i);
-                }}
-              >
-                {/* Haven't Played Button - Top Right Corner */}
-                <div className="absolute top-0 right-0 w-11 h-11 sm:w-[75px] sm:h-[65px] flex items-center justify-center">
-                  <button
-                    onClick={async (e) => {
-                      e.stopPropagation();
-                      if (!isAlreadyMarked) {
-                        try {
-                          await handleHaventPlayed(i, matchup, replaceMachine);
-                        } catch (err) {
-                          console.error('Failed to mark machine as haven\'t played:', err);
-                          // You could add a toast notification here for user feedback
-                        }
-                      } else {
-                        // If machine is already marked but still visible, force a refresh
-                        console.warn('Attempting to interact with already-marked machine, forcing refresh');
-                        fetchMatchup(false, true);
-                      }
-                    }}
-                    className={`haven-played-btn w-5 h-5 sm:w-[70px] sm:h-[60px] flex items-center justify-center rounded-full transition-colors z-10 ${
-                      isAlreadyMarked
-                        ? 'text-gray-400 dark:text-gray-500 cursor-pointer hover:text-red-600 dark:hover:text-red-400'
-                        : 'text-red-600 dark:text-red-400 cursor-pointer'
-                    }`}
-                    title={isAlreadyMarked ? "Already marked - click to refresh" : "Mark as haven't played"}
-                    disabled={false}
-                    style={{
-                      backgroundColor: 'transparent',
-                      background: 'transparent',
-                      WebkitTapHighlightColor: 'transparent'
-                    }}
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M20 12H4" />
-                    </svg>
-                  </button>
-                </div>
-                
-                <div className="w-full flex justify-center">
-                  <h2 className="text-lg sm:text-xl font-bold mb-1 sm:mb-2 text-gray-900 dark:text-gray-100 break-words leading-tight text-center" style={{ maxWidth: 'calc(100% - 4rem)' }}>
-                    {name}
-                  </h2>
-                </div>
-                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 mb-1 sm:mb-2 w-full">
-                  <span>{year}</span>
-                  <span className="mx-1">·</span>
-                  <span>{manufacturer}</span>
-                </p>
-                <div className="flex-1 flex items-center justify-center sm:hidden">
-                  <MachineImage 
-                    machine={machine} 
-                    name={name} 
-                    imageUrl={i === 0 ? imageStates.left.url : imageStates.right.url}
-                    imageState={i === 0 ? imageStates.left : imageStates.right}
-                  />
-                </div>
-                <div className="hidden sm:absolute sm:inset-0 sm:flex sm:items-center sm:justify-center">
-                  <MachineImage 
-                    machine={machine} 
-                    name={name} 
-                    imageUrl={i === 0 ? imageStates.left.url : imageStates.right.url}
-                    imageState={i === 0 ? imageStates.left : imageStates.right}
-                  />
-                </div>
-              </div>
-            );
-          })}
-        </div>
+            {validMachines.map((machine, i) => (
+              <MachineCard
+                key={`${machine.opdb_id.split('-')[0]}-${i}-${machine.opdb_id}`}
+                machine={machine}
+                index={i}
+                matchup={matchup}
+                imageStates={imageStates}
+                clickedCard={clickedCard}
+                userPreferences={userPreferences}
+                handleVote={handleVote}
+                handleHaventPlayed={handleHaventPlayed}
+                replaceMachine={replaceMachine}
+                fetchMatchup={fetchMatchup}
+              />
+            ))}
+          </div>
         </>
       )}
     </>
