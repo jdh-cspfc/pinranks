@@ -12,9 +12,14 @@
  *   --dry-run  Don't actually download, just show what would be downloaded
  */
 
-const fs = require('fs');
-const path = require('path');
-const axios = require('axios');
+import fs from 'fs';
+import path from 'path';
+import axios from 'axios';
+import { fileURLToPath } from 'url';
+
+// Get __dirname equivalent for ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Parse command line arguments
 const args = process.argv.slice(2);
@@ -148,6 +153,16 @@ async function downloadMachineImages(machine) {
 // Import shared filter utilities
 import { getFilterGroup, filterMachinesByPriority } from '../src/utils/filterUtils.js';
 
+// Map priority options to their corresponding filter groups
+const PRIORITY_TO_FILTER_MAP = {
+  'alphanumeric': 'Solid State',
+  'reels': 'EM',
+  'dmd': 'DMD',
+  'lcd': 'LCD',
+  'modern': 'modern',
+  'all': 'all'
+};
+
 async function main() {
   console.log(`🚀 Starting image download process...`);
   console.log(`   Total machines: ${machines.length}`);
@@ -164,11 +179,13 @@ async function main() {
   }
   console.log('');
   
-  // Filter machines by priority first
-  const filteredMachines = filterMachinesByPriority(machines, options.priority);
+  // Map priority to filter group and filter machines
+  const filterGroup = PRIORITY_TO_FILTER_MAP[options.priority] || options.priority;
+  const filteredMachines = filterMachinesByPriority(machines, filterGroup);
   console.log(`📊 Priority filtering:`);
   console.log(`   Total machines: ${machines.length}`);
   console.log(`   After ${options.priority} filter: ${filteredMachines.length}`);
+  console.log(`   Filter group used: ${filterGroup}`);
   console.log('');
   
   // Start from where we left off

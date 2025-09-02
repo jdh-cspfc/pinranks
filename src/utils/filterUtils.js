@@ -41,7 +41,7 @@ export const filterMachinesByPriority = (machines, priority) => {
     if (priority === 'modern') {
       return MODERN_FILTERS.includes(group);
     }
-    return group === priority.toUpperCase();
+    return group === priority;
   });
 };
 
