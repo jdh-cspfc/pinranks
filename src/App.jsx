@@ -5,42 +5,51 @@ import { useAppData } from './hooks/useAppData'
 import { useAppNavigation } from './hooks/useAppNavigation.jsx'
 import { signOut } from 'firebase/auth'
 import { auth } from './firebase'
+import ErrorBoundary from './components/ErrorBoundary'
+import { useErrorHandler } from './hooks/useErrorHandler'
 
 export default function App() {
   const { user, isLoading } = useAppData()
   const hasCheckedAuth = !isLoading
   const { activeView, setActiveView, mainContent } = useAppNavigation(user, hasCheckedAuth)
+  const { handleError } = useErrorHandler('App')
   
   const handleLogout = async () => {
     try {
       await signOut(auth)
     } catch (error) {
-      console.error('Logout error:', error)
+      handleError(error, { action: 'logout' })
     }
   }
 
   return (
-    <DarkModeProvider>
-      {/* Ensure background color fills the viewport in both light and dark mode */}
-      <style>{`
-        html, body {
-          background-color: #f3f4f6 !important;
-        }
-        html.dark, body.dark, .dark html, .dark body {
-          background-color: #111827 !important;
-        }
-      `}</style>
-      <TopBar 
-        user={user} 
-        onProfileClick={() => setActiveView('profile')} 
-        onMenuClick={() => {}} 
-        onNavigate={setActiveView} 
-        onLogout={handleLogout}
-        hasCheckedAuth={hasCheckedAuth}
-      />
-      <div className="min-h-screen bg-gray-100 dark:bg-gray-900 pt-16 p-4">
-        {mainContent}
-      </div>
-    </DarkModeProvider>
+    <ErrorBoundary onError={(error, errorInfo) => handleError(error, { action: 'react_error', metadata: { errorInfo } })}>
+      <DarkModeProvider>
+        {/* Ensure background color fills the viewport in both light and dark mode */}
+        <style>{`
+          html, body {
+            background-color: #f3f4f6 !important;
+          }
+          html.dark, body.dark, .dark html, .dark body {
+            background-color: #111827 !important;
+          }
+        `}</style>
+        <ErrorBoundary onError={(error, errorInfo) => handleError(error, { action: 'topbar_error', metadata: { errorInfo } })}>
+          <TopBar 
+            user={user} 
+            onProfileClick={() => setActiveView('profile')} 
+            onMenuClick={() => {}} 
+            onNavigate={setActiveView} 
+            onLogout={handleLogout}
+            hasCheckedAuth={hasCheckedAuth}
+          />
+        </ErrorBoundary>
+        <div className="min-h-screen bg-gray-100 dark:bg-gray-900 pt-16 p-4">
+          <ErrorBoundary onError={(error, errorInfo) => handleError(error, { action: 'main_content_error', metadata: { errorInfo } })}>
+            {mainContent}
+          </ErrorBoundary>
+        </div>
+      </DarkModeProvider>
+    </ErrorBoundary>
   )
 }

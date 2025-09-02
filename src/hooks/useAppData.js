@@ -5,12 +5,15 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { StaticDataService, UserDataService, AuthService } from '../services/dataService';
+import { useErrorHandler } from './useErrorHandler';
 
 /**
  * Centralized hook for all application data
  * Provides user, machines, groups, user preferences, and rankings
  */
 export const useAppData = () => {
+  const { handleError } = useErrorHandler('useAppData');
+  
   // Core state
   const [user, setUser] = useState(null);
   const [machines, setMachines] = useState(null);
@@ -43,7 +46,7 @@ export const useAppData = () => {
         setGroups(groupsData);
         setIsStaticDataLoading(false);
       } catch (error) {
-        console.error('Failed to load static data:', error);
+        handleError(error, { action: 'loadStaticData' });
         setMachines([]);
         setGroups([]);
         setIsStaticDataLoading(false);
@@ -51,7 +54,7 @@ export const useAppData = () => {
     };
 
     loadStaticData();
-  }, []);
+  }, [handleError]);
 
   // Load user-specific data when user changes
   useEffect(() => {
@@ -73,7 +76,7 @@ export const useAppData = () => {
         setUserPreferences(preferences);
         setUserRankings(rankings);
       } catch (error) {
-        console.error('Failed to load user data:', error);
+        handleError(error, { action: 'loadUserData', metadata: { userId: user.uid } });
         setUserPreferences({ blockedMachines: [] });
         setUserRankings([]);
       } finally {
@@ -82,7 +85,7 @@ export const useAppData = () => {
     };
 
     loadUserData();
-  }, [user]);
+  }, [user, handleError]);
 
   // Update overall loading state
   useEffect(() => {
@@ -104,10 +107,10 @@ export const useAppData = () => {
       setUserPreferences(prev => ({ ...prev, blockedMachines: newBlockedMachines }));
       return true;
     } catch (error) {
-      console.error('Failed to add blocked machine:', error);
+      handleError(error, { action: 'addBlockedMachine', metadata: { groupId, userId: user.uid } });
       throw error;
     }
-  }, [user, userPreferences.blockedMachines]);
+  }, [user, userPreferences.blockedMachines, handleError]);
 
   const isMachineBlocked = useCallback((groupId) => {
     return userPreferences.blockedMachines.some(blockedId => groupId.startsWith(blockedId));
@@ -127,11 +130,11 @@ export const useAppData = () => {
       setUserPreferences(preferences);
       setUserRankings(rankings);
     } catch (error) {
-      console.error('Failed to refresh user data:', error);
+      handleError(error, { action: 'refreshUserData', metadata: { userId: user.uid } });
     } finally {
       setIsUserDataLoading(false);
     }
-  }, [user]);
+  }, [user, handleError]);
 
   return {
     // Core data

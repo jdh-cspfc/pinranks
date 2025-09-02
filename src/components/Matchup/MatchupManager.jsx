@@ -3,10 +3,14 @@ import { useMatchupData } from '../../hooks/useMatchupData';
 import { useImageLoading } from '../../hooks/useImageLoading';
 import { useUserPreferences } from '../../hooks/useUserPreferences';
 import { useVoting } from '../../hooks/useVoting';
+import { useErrorHandler } from '../../hooks/useErrorHandler';
+import { LoadingError } from '../ErrorDisplay';
 import FilterButtons from './FilterButtons';
 import MatchupDisplay from './MatchupDisplay';
 
 export default function MatchupManager() {
+  const { handleError } = useErrorHandler('MatchupManager');
+  
   try {
     const [filter, setFilter] = useState(['All']);
     
@@ -37,7 +41,12 @@ export default function MatchupManager() {
     }, [filter]);
 
     if (error) {
-      return <div className="text-red-600">{error}</div>;
+      return (
+        <LoadingError 
+          onRetry={() => fetchMatchup()} 
+          message={error}
+        />
+      );
     }
 
     // Show loading if user preferences haven't been loaded yet
@@ -69,13 +78,12 @@ export default function MatchupManager() {
       </>
     );
   } catch (err) {
-    console.error('Error in MatchupManager:', err);
+    handleError(err, { action: 'component_render' });
     return (
-      <div className="p-4 text-red-600">
-        <h2>Error in MatchupManager</h2>
-        <p>{err.message}</p>
-        <pre>{err.stack}</pre>
-      </div>
+      <LoadingError 
+        onRetry={() => window.location.reload()} 
+        message="An unexpected error occurred in the matchup component"
+      />
     );
   }
 }

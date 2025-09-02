@@ -1,6 +1,7 @@
 import { initializeApp } from 'firebase/app'
 import { getAuth, setPersistence, browserLocalPersistence } from 'firebase/auth'
 import { getFirestore } from 'firebase/firestore'
+import errorService from './services/errorService'
 
 const firebaseConfig = {
   apiKey: "AIzaSyCWzLfjymwB9BOfbHH9iePqjOUD2l_KVPY",
@@ -22,7 +23,10 @@ setPersistence(auth, browserLocalPersistence)
     console.log('Firebase Auth persistence set to LOCAL')
   })
   .catch((error) => {
-    console.error('Error setting Firebase Auth persistence:', error)
+    errorService.logError(error, {
+      component: 'firebase',
+      action: 'setPersistence'
+    })
   })
 
 export const db = getFirestore(app)

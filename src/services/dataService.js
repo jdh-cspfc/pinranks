@@ -8,6 +8,7 @@ import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
 import { getCachedData } from '../caching';
 import { CACHE_DURATION } from '../constants/appConstants';
+import errorService from './errorService';
 
 /**
  * Static data service for machines and groups
@@ -54,7 +55,11 @@ export class UserDataService {
       }
       return { blockedMachines: [] };
     } catch (error) {
-      console.error('Failed to fetch user preferences:', error);
+      errorService.logError(error, {
+        component: 'UserDataService',
+        action: 'getUserPreferences',
+        metadata: { userId }
+      });
       return { blockedMachines: [] };
     }
   }
@@ -78,7 +83,11 @@ export class UserDataService {
       }
       return [];
     } catch (error) {
-      console.error('Failed to fetch user rankings:', error);
+      errorService.logError(error, {
+        component: 'UserDataService',
+        action: 'getUserRankings',
+        metadata: { userId }
+      });
       return [];
     }
   }
@@ -94,7 +103,11 @@ export class UserDataService {
       }, { merge: true });
       return true;
     } catch (error) {
-      console.error('Failed to update user preferences:', error);
+      errorService.logError(error, {
+        component: 'UserDataService',
+        action: 'updateUserPreferences',
+        metadata: { userId, preferencesKeys: Object.keys(preferences) }
+      });
       throw error;
     }
   }
