@@ -23,7 +23,7 @@ export default function App() {
   }
 
   return (
-    <ErrorBoundary onError={(error, errorInfo) => handleError(error, { action: 'react_error', metadata: { errorInfo } })}>
+    <ErrorBoundary onError={(error, errorInfo) => handleError(error, { action: 'app_error', metadata: { errorInfo } })}>
       <DarkModeProvider>
         {/* Ensure background color fills the viewport in both light and dark mode */}
         <style>{`
@@ -34,20 +34,16 @@ export default function App() {
             background-color: #111827 !important;
           }
         `}</style>
-        <ErrorBoundary onError={(error, errorInfo) => handleError(error, { action: 'topbar_error', metadata: { errorInfo } })}>
-          <TopBar 
-            user={user} 
-            onProfileClick={() => setActiveView('profile')} 
-            onMenuClick={() => {}} 
-            onNavigate={setActiveView} 
-            onLogout={handleLogout}
-            hasCheckedAuth={hasCheckedAuth}
-          />
-        </ErrorBoundary>
+        <TopBar 
+          user={user} 
+          onProfileClick={() => setActiveView('profile')} 
+          onMenuClick={() => {}} 
+          onNavigate={setActiveView} 
+          onLogout={handleLogout}
+          hasCheckedAuth={hasCheckedAuth}
+        />
         <div className="min-h-screen bg-gray-100 dark:bg-gray-900 pt-16 p-4">
-          <ErrorBoundary onError={(error, errorInfo) => handleError(error, { action: 'main_content_error', metadata: { errorInfo } })}>
-            {mainContent}
-          </ErrorBoundary>
+          {mainContent}
         </div>
       </DarkModeProvider>
     </ErrorBoundary>
