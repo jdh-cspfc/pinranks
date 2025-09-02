@@ -93,9 +93,7 @@ export default function RankingsList({
           return (
             <li 
               key={item.machineId} 
-              className={`mb-2 text-xs md:text-sm text-gray-800 dark:text-gray-200 transition-all duration-300 ease-out
-                ${isNewItem ? 'animate-pulse opacity-75' : 'opacity-100'}
-              `}
+              className="mb-2 text-xs md:text-sm text-gray-800 dark:text-gray-200"
             >
               <span className="font-semibold">{item.info.name}</span>
               <span className="text-gray-500 dark:text-gray-400 ml-2">{item.info.year}</span>
