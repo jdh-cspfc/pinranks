@@ -170,6 +170,47 @@ class ErrorService {
   }
 
   /**
+   * Get user-friendly error message from any error
+   */
+  getUserFriendlyMessage(error, context = {}) {
+    // If it's a Firebase error, use the Firebase handler
+    if (error.code && error.code.startsWith('auth/')) {
+      return this.handleFirebaseError(error, context);
+    }
+
+    // Handle common error patterns
+    if (typeof error === 'string') {
+      return error;
+    }
+
+    if (error instanceof Error) {
+      // Check for common error messages and make them user-friendly
+      const message = error.message.toLowerCase();
+      
+      if (message.includes('network') || message.includes('fetch')) {
+        return 'Network error. Please check your connection and try again.';
+      }
+      
+      if (message.includes('permission') || message.includes('unauthorized')) {
+        return 'You do not have permission to perform this action.';
+      }
+      
+      if (message.includes('not found') || message.includes('404')) {
+        return 'The requested resource was not found.';
+      }
+      
+      if (message.includes('timeout')) {
+        return 'The request timed out. Please try again.';
+      }
+      
+      // For other errors, provide a generic message
+      return 'Something went wrong. Please try again.';
+    }
+
+    return 'An unexpected error occurred. Please try again.';
+  }
+
+  /**
    * Handle Firebase-specific errors
    */
   handleFirebaseError(error, context = {}) {

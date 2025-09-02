@@ -9,9 +9,8 @@ import { replaceMachineInMatchup } from '../utils/matchupReplacement';
 
 export const useMatchupData = (filter) => {
   const { machines, groups, user, userPreferences } = useAppData();
-  const { handleError, withRetry } = useErrorHandler('useMatchupData');
+  const { handleError, withRetry, userError, clearMessages } = useErrorHandler('useMatchupData');
   const [matchup, setMatchup] = useState(null);
-  const [error, setError] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isFiltering, setIsFiltering] = useState(false);
   const [isVoting, setIsVoting] = useState(false);
@@ -37,12 +36,13 @@ export const useMatchupData = (filter) => {
   // Main function to fetch matchup data
   const fetchMatchup = useCallback(async (isFilterChange = false, isVoteChange = false) => {
     if (!machines || !groups) {
-      setError('Machines and groups data not available');
+      handleError('Machines and groups data not available', { action: 'fetchMatchup_validation' });
       return;
     }
 
     try {
       setLoadingStates(isFilterChange, isVoteChange);
+      clearMessages(); // Clear any previous error messages
       
       // Use retry mechanism for data fetching
       const result = await withRetry(async () => {
@@ -60,17 +60,16 @@ export const useMatchupData = (filter) => {
       });
 
       setMatchup(result);
-      setError(null); // Clear any previous errors
       clearLoadingStates();
     } catch (err) {
       handleError(err, { 
         action: 'fetchMatchup', 
-        metadata: { filter, isFilterChange, isVoteChange } 
+        metadata: { filter, isFilterChange, isVoteChange },
+        userMessage: 'Failed to load pinball machines. Please try again.'
       });
-      setError(`Failed to load pinball machines: ${err.message}`);
       clearLoadingStates();
     }
-  }, [filter, user, userPreferences, machines, groups, handleError, withRetry]);
+  }, [filter, user, userPreferences, machines, groups, handleError, withRetry, clearMessages]);
 
   // Replace a specific machine with a new one
   const replaceMachine = useCallback(async (machineIndex) => {
@@ -100,13 +99,12 @@ export const useMatchupData = (filter) => {
 
   return {
     matchup,
-    error,
+    error: userError, // Use centralized error state
     isLoading,
     isFiltering,
     isVoting,
     fetchMatchup,
     replaceMachine,
-    setError,
-    clearError: () => setError(null)
+    clearError: clearMessages
   };
 }; 

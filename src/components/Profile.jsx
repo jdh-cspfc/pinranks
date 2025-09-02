@@ -6,10 +6,11 @@ import { useAppData } from '../hooks/useAppData';
 import { useErrorHandler } from '../hooks/useErrorHandler';
 import { UserDataService } from '../services/dataService';
 import Card from './Card';
+import { Message } from './ErrorDisplay';
 
 export default function Profile() {
   const { darkMode, setDarkMode } = useDarkMode();
-  const { handleError, handleFirebaseError } = useErrorHandler('Profile');
+  const { handleError, handleFirebaseError, userError, userSuccess, clearMessages } = useErrorHandler('Profile');
   const { 
     user, 
     machines, 
@@ -26,8 +27,7 @@ export default function Profile() {
     try {
       await signOut(auth);
     } catch (err) {
-      const userMessage = handleFirebaseError(err, { action: 'logout' });
-      alert(userMessage);
+      handleFirebaseError(err, { action: 'logout' });
     }
   };
 
@@ -43,8 +43,11 @@ export default function Profile() {
       // Refresh user data to get updated preferences
       await refreshUserData();
     } catch (err) {
-      handleError(err, { action: 'removeFromBlockedList', metadata: { groupId } });
-      alert('Failed to remove machine. Please try again.');
+      handleError(err, { 
+        action: 'removeFromBlockedList', 
+        metadata: { groupId },
+        userMessage: 'Failed to remove machine. Please try again.'
+      });
     }
   };
 
@@ -59,6 +62,14 @@ export default function Profile() {
   return (
     <Card>
       <h2 className="text-2xl font-bold mb-4 text-gray-900 dark:text-gray-100">Profile</h2>
+      
+      {/* Error/Success Messages */}
+      <Message 
+        error={userError}
+        success={userSuccess}
+        onDismiss={clearMessages}
+        className="mb-4"
+      />
       
       {/* Dark Mode Toggle */}
       <div className="flex items-center justify-center gap-4 mb-6">

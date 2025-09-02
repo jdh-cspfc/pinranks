@@ -1,24 +1,16 @@
 import React from 'react';
+import { Message } from './ErrorDisplay';
 
 /**
  * Component for displaying authentication error and success messages
+ * Now uses the unified Message component for consistent styling
  */
 export default function AuthErrorHandler({ formError, formSuccess }) {
-  if (formError) {
-    return (
-      <div className="bg-red-100 text-red-700 text-sm p-2 rounded">
-        {formError}
-      </div>
-    );
-  }
-
-  if (formSuccess) {
-    return (
-      <div className="bg-green-100 text-green-700 text-sm p-2 rounded">
-        {formSuccess}
-      </div>
-    );
-  }
-
-  return null;
+  return (
+    <Message 
+      error={formError}
+      success={formSuccess}
+      className="mb-4"
+    />
+  );
 }

@@ -13,6 +13,7 @@ import {
   getDoc
 } from 'firebase/firestore';
 import { AUTH_ERRORS, VALIDATION_MESSAGES, SUCCESS_MESSAGES, USERNAME_REGEX } from '../constants/appConstants';
+import { useErrorHandler } from './useErrorHandler';
 
 /**
  * Custom hook for managing authentication form state and operations
@@ -26,8 +27,16 @@ export const useAuthForm = () => {
   });
   const [isLogin, setIsLogin] = useState(true);
   const [user, setUser] = useState(null);
-  const [formError, setFormError] = useState('');
-  const [formSuccess, setFormSuccess] = useState('');
+  
+  // Use centralized error handling
+  const { 
+    handleError, 
+    handleFirebaseError, 
+    handleSuccess, 
+    userError: formError, 
+    userSuccess: formSuccess, 
+    clearMessages 
+  } = useErrorHandler('useAuthForm');
 
   // Handle user authentication state
   useEffect(() => {
@@ -50,11 +59,7 @@ export const useAuthForm = () => {
     });
   };
 
-  // Clear messages
-  const clearMessages = () => {
-    setFormError('');
-    setFormSuccess('');
-  };
+  // Clear messages (now handled by useErrorHandler)
 
   // Toggle between login and register
   const toggleMode = () => {
@@ -66,7 +71,7 @@ export const useAuthForm = () => {
   // Handle login
   const handleLogin = async () => {
     if (!formData.loginId) {
-      setFormError(VALIDATION_MESSAGES.LOGIN_ID_REQUIRED);
+      handleError(VALIDATION_MESSAGES.LOGIN_ID_REQUIRED, { action: 'login_validation' });
       return;
     }
 
@@ -78,17 +83,13 @@ export const useAuthForm = () => {
         const usernameDoc = await getDoc(doc(db, 'usernames', formData.loginId));
         
         if (!usernameDoc.exists()) {
-          setFormError(AUTH_ERRORS.USERNAME_NOT_FOUND);
+          handleError(AUTH_ERRORS.USERNAME_NOT_FOUND, { action: 'username_lookup' });
           return;
         }
         
         loginEmail = usernameDoc.data().email;
       } catch (err) {
-        if (err.code === 'permission-denied') {
-          setFormError(AUTH_ERRORS.PERMISSION_DENIED);
-        } else {
-          setFormError(AUTH_ERRORS.UNEXPECTED_ERROR);
-        }
+        handleFirebaseError(err, { action: 'username_lookup' });
         return;
       }
     }
@@ -96,24 +97,7 @@ export const useAuthForm = () => {
     try {
       await signInWithEmailAndPassword(auth, loginEmail, formData.password);
     } catch (loginErr) {
-      const code = loginErr.code;
-      switch (code) {
-        case 'auth/user-not-found':
-          setFormError(AUTH_ERRORS.USER_NOT_FOUND);
-          break;
-        case 'auth/wrong-password':
-          setFormError(AUTH_ERRORS.WRONG_PASSWORD);
-          break;
-        case 'auth/invalid-email':
-          setFormError(AUTH_ERRORS.INVALID_EMAIL);
-          break;
-        case 'auth/too-many-requests':
-          setFormError(AUTH_ERRORS.TOO_MANY_REQUESTS);
-          break;
-        default:
-          setFormError(AUTH_ERRORS.LOGIN_FAILED);
-          console.error('Unhandled auth error:', loginErr);
-      }
+      handleFirebaseError(loginErr, { action: 'sign_in' });
     }
   };
 
@@ -121,18 +105,18 @@ export const useAuthForm = () => {
   const handleRegister = async () => {
     // Validate username
     if (!formData.username) {
-      setFormError(VALIDATION_MESSAGES.USERNAME_REQUIRED);
+      handleError(VALIDATION_MESSAGES.USERNAME_REQUIRED, { action: 'register_validation' });
       return;
     }
 
     if (!USERNAME_REGEX.test(formData.username)) {
-      setFormError(VALIDATION_MESSAGES.USERNAME_INVALID);
+      handleError(VALIDATION_MESSAGES.USERNAME_INVALID, { action: 'register_validation' });
       return;
     }
 
     // Check if email and password are provided
     if (!formData.email || !formData.password) {
-      setFormError(VALIDATION_MESSAGES.EMAIL_PASSWORD_REQUIRED);
+      handleError(VALIDATION_MESSAGES.EMAIL_PASSWORD_REQUIRED, { action: 'register_validation' });
       return;
     }
 
@@ -141,15 +125,11 @@ export const useAuthForm = () => {
       const usernameDoc = await getDoc(doc(db, 'usernames', formData.username));
       
       if (usernameDoc.exists()) {
-        setFormError(AUTH_ERRORS.USERNAME_ALREADY_TAKEN);
+        handleError(AUTH_ERRORS.USERNAME_ALREADY_TAKEN, { action: 'username_check' });
         return;
       }
     } catch (err) {
-      if (err.code === 'permission-denied') {
-        setFormError(AUTH_ERRORS.PERMISSION_DENIED);
-      } else {
-        setFormError(AUTH_ERRORS.UNEXPECTED_ERROR);
-      }
+      handleFirebaseError(err, { action: 'username_check' });
       return;
     }
 
@@ -158,21 +138,7 @@ export const useAuthForm = () => {
     try {
       userCredential = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
     } catch (err) {
-      const code = err.code;
-      switch (code) {
-        case 'auth/email-already-in-use':
-          setFormError(AUTH_ERRORS.EMAIL_ALREADY_IN_USE);
-          break;
-        case 'auth/invalid-email':
-          setFormError(AUTH_ERRORS.INVALID_EMAIL);
-          break;
-        case 'auth/weak-password':
-          setFormError(AUTH_ERRORS.WEAK_PASSWORD);
-          break;
-        default:
-          setFormError(AUTH_ERRORS.REGISTRATION_FAILED);
-          console.error('Unhandled auth error:', err);
-      }
+      handleFirebaseError(err, { action: 'create_account' });
       return;
     }
 
@@ -191,38 +157,26 @@ export const useAuthForm = () => {
         email: user.email
       });
 
-      setFormSuccess(SUCCESS_MESSAGES.ACCOUNT_CREATED);
+      handleSuccess(SUCCESS_MESSAGES.ACCOUNT_CREATED, { action: 'account_created' });
       setIsLogin(true);
       clearFormData();
     } catch (err) {
-      setFormError(AUTH_ERRORS.SAVE_USER_DATA_ERROR);
-      console.error('Firestore write error:', err);
+      handleFirebaseError(err, { action: 'save_user_data' });
     }
   };
 
   // Handle password reset
   const handlePasswordReset = async () => {
     if (!formData.loginId.includes('@')) {
-      setFormError(VALIDATION_MESSAGES.EMAIL_REQUIRED_FOR_RESET);
+      handleError(VALIDATION_MESSAGES.EMAIL_REQUIRED_FOR_RESET, { action: 'password_reset_validation' });
       return;
     }
 
     try {
       await sendPasswordResetEmail(auth, formData.loginId);
-      setFormSuccess(SUCCESS_MESSAGES.PASSWORD_RESET_SENT);
+      handleSuccess(SUCCESS_MESSAGES.PASSWORD_RESET_SENT, { action: 'password_reset_sent' });
     } catch (err) {
-      const code = err.code;
-      switch (code) {
-        case 'auth/user-not-found':
-          setFormError(AUTH_ERRORS.NO_ACCOUNT_FOUND);
-          break;
-        case 'auth/invalid-email':
-          setFormError(AUTH_ERRORS.INVALID_EMAIL);
-          break;
-        default:
-          setFormError(AUTH_ERRORS.PASSWORD_RESET_ERROR);
-          console.error('Password reset error:', err);
-      }
+      handleFirebaseError(err, { action: 'password_reset' });
     }
   };
 
@@ -231,7 +185,7 @@ export const useAuthForm = () => {
     try {
       await signOut(auth);
     } catch (err) {
-      setFormError(AUTH_ERRORS.LOGOUT_ERROR);
+      handleFirebaseError(err, { action: 'logout' });
     }
   };
 
@@ -247,8 +201,7 @@ export const useAuthForm = () => {
         await handleRegister();
       }
     } catch (err) {
-      setFormError('Something unexpected went wrong. Please try again.');
-      console.error('Unexpected error:', err);
+      handleError('Something unexpected went wrong. Please try again.', { action: 'form_submission' });
     }
   };
 

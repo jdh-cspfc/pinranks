@@ -1,4 +1,5 @@
 import React from 'react';
+import { useErrorHandler } from '../../hooks/useErrorHandler';
 
 // Component to handle the "haven't played" button with all its complex logic
 export default function HaventPlayedButton({ 
@@ -10,6 +11,7 @@ export default function HaventPlayedButton({
   matchup, 
   fetchMatchup 
 }) {
+  const { handleError } = useErrorHandler('HaventPlayedButton');
   // Add mobile-specific debugging for state consistency
   if (window.innerWidth < 640) {
     console.log('Mobile: Machine card state check:', {
@@ -38,8 +40,10 @@ export default function HaventPlayedButton({
             try {
               await handleHaventPlayed(index, matchup);
             } catch (err) {
-              console.error('Failed to mark machine as haven\'t played:', err);
-              // You could add a toast notification here for user feedback
+              handleError(err, { 
+                action: 'mark_havent_played', 
+                metadata: { index, groupId, machineName: matchup?.machines?.[index]?.name }
+              });
             }
           } else {
             // If machine is already marked but still visible, force a refresh

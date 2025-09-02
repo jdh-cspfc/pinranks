@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import { db } from '../firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { useErrorHandler } from './useErrorHandler';
 
 export const useUserBlockedMachines = (user) => {
+  const { handleError } = useErrorHandler('useUserBlockedMachines');
   const [blockedMachines, setBlockedMachines] = useState([]);
   const [isLoaded, setIsLoaded] = useState(false);
 
@@ -27,7 +29,7 @@ export const useUserBlockedMachines = (user) => {
         }
         setIsLoaded(true);
       } catch (err) {
-        console.error('Failed to load blocked machines:', err);
+        handleError(err, { action: 'load_blocked_machines', metadata: { userId: user.uid } });
         setBlockedMachines([]);
         setIsLoaded(true);
       }
@@ -54,7 +56,7 @@ export const useUserBlockedMachines = (user) => {
       setBlockedMachines(newBlockedMachines);
       return true;
     } catch (err) {
-      console.error('Failed to update blocked machines:', err);
+      handleError(err, { action: 'update_blocked_machines', metadata: { groupId, userId: user.uid } });
       throw err;
     }
   };

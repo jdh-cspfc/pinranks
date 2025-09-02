@@ -1,8 +1,10 @@
 import { useAppData } from './useAppData';
 import { useConfirmationMessage } from './useConfirmationMessage';
 import { UI_CONSTANTS } from '../constants/appConstants';
+import { useErrorHandler } from './useErrorHandler';
 
 export const useUserPreferences = () => {
+  const { handleError } = useErrorHandler('useUserPreferences');
   const { 
     user, 
     userPreferences, 
@@ -50,7 +52,10 @@ export const useUserPreferences = () => {
         
         // If replacement failed, show an error message
         if (!replacementSuccess) {
-          console.error('Machine replacement failed:', { machineIndex, groupId, isMobile });
+          handleError('Failed to find a replacement machine', { 
+            action: 'machine_replacement_failed', 
+            metadata: { machineIndex, groupId, isMobile }
+          });
           
           // On mobile, still update preferences even if replacement failed
           if (isMobile) {
@@ -75,7 +80,10 @@ export const useUserPreferences = () => {
         return { success: true, machineName: machine.name };
         
       } catch (err) {
-        console.error('Failed to handle haven\'t played:', err);
+        handleError(err, { 
+          action: 'handleHaventPlayed', 
+          metadata: { machineIndex, groupId, isMobile }
+        });
         
         // Provide more specific error messages
         let errorMessage = 'Failed to update preferences. ';
