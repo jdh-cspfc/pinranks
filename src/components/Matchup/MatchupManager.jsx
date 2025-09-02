@@ -1,18 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useMatchupData } from '../../hooks/useMatchupData';
 import { useImageLoading } from '../../hooks/useImageLoading';
-import { useUserPreferences } from '../../hooks/useUserPreferences';
 import { useVoting } from '../../hooks/useVoting';
 
 import { LoadingError, Message } from '../ErrorDisplay';
 import FilterButtons from './FilterButtons';
 import MatchupDisplay from './MatchupDisplay';
 
-export default function MatchupManager() {
+export default function MatchupManager({ user, userPreferences, userPreferencesLoaded, createHandleHaventPlayed }) {
   const [filter, setFilter] = useState(['All']);
-  
-  // First, get user preferences (which includes user auth)
-  const { user, userPreferences, userPreferencesLoaded, confirmationMessage, createHandleHaventPlayed } = useUserPreferences();
   
   // Then, get matchup data using the centralized data
   const { matchup, error, isLoading, isFiltering, isVoting, fetchMatchup, replaceMachine } = useMatchupData(filter);

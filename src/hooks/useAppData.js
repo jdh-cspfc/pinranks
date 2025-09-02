@@ -116,6 +116,34 @@ export const useAppData = () => {
     return userPreferences.blockedMachines.some(blockedId => groupId.startsWith(blockedId));
   }, [userPreferences.blockedMachines]);
 
+  const removeBlockedMachine = useCallback(async (groupId) => {
+    if (!user) {
+      throw new Error('You must be logged in to use this feature.');
+    }
+
+    // Store original state for rollback
+    const originalBlockedMachines = [...userPreferences.blockedMachines];
+    const newBlockedMachines = originalBlockedMachines.filter(id => id !== groupId);
+
+    try {
+      // Optimistic update: immediately update local state
+      setUserPreferences(prev => ({ ...prev, blockedMachines: newBlockedMachines }));
+
+      // Update Firebase in the background
+      await UserDataService.updateUserPreferences(user.uid, { 
+        blockedMachines: newBlockedMachines 
+      });
+      
+      return true;
+    } catch (error) {
+      // Rollback: restore original state if Firebase update failed
+      setUserPreferences(prev => ({ ...prev, blockedMachines: originalBlockedMachines }));
+      
+      handleError(error, { action: 'removeBlockedMachine', metadata: { groupId, userId: user.uid } });
+      throw error;
+    }
+  }, [user, userPreferences.blockedMachines, handleError]);
+
   // Refresh user data
   const refreshUserData = useCallback(async () => {
     if (!user) return;
@@ -157,6 +185,7 @@ export const useAppData = () => {
     
     // Helper functions
     addBlockedMachine,
+    removeBlockedMachine,
     isMachineBlocked,
     refreshUserData,
     

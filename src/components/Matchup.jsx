@@ -3,7 +3,7 @@ import { MatchupManager } from './Matchup/index.js';
 import { useUserPreferences } from '../hooks/useUserPreferences';
 
 export default function Matchup() {
-  const { confirmationMessage } = useUserPreferences();
+  const { user, userPreferences, userPreferencesLoaded, confirmationMessage, createHandleHaventPlayed } = useUserPreferences();
 
   return (
     <>
@@ -17,7 +17,12 @@ export default function Matchup() {
         </div>
       )}
       
-      <MatchupManager />
+      <MatchupManager 
+        user={user}
+        userPreferences={userPreferences}
+        userPreferencesLoaded={userPreferencesLoaded}
+        createHandleHaventPlayed={createHandleHaventPlayed}
+      />
     </>
   );
 }
