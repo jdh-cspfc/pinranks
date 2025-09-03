@@ -44,11 +44,11 @@ class ErrorService {
       severity: context.severity || 'error'
     };
 
-    // Log to console in development
+    // Log to console in development (using proper console methods)
     if (process.env.NODE_ENV === 'development') {
       console.group(`🚨 Error in ${errorEntry.context.component}`);
       console.error('Error:', error);
-      console.log('Context:', errorEntry.context);
+      console.info('Context:', errorEntry.context);
       console.groupEnd();
     }
 

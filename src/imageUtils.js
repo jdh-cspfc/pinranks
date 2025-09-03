@@ -2,6 +2,7 @@
 // This handles checking for locally stored images before falling back to OPDB URLs
 
 import { FIREBASE_CONFIG, IMAGE_CONFIG } from './config.js';
+import errorService from './services/errorService.js';
 
 const FIREBASE_FUNCTIONS_URL = FIREBASE_CONFIG.functionsUrl;
 
@@ -118,7 +119,13 @@ export async function downloadMachineImages(machine) {
       return { success: false, error };
     }
   } catch (error) {
-    // Failed to download images - error will be handled by calling component
+    // Log error for debugging
+    errorService.logError(error, {
+      component: 'imageUtils',
+      action: 'downloadMachineImages',
+      metadata: { opdbId: machine.opdb_id, imageUrls: Object.keys(backglass.urls) }
+    });
+    
     return { success: false, error: error.message };
   }
 }
@@ -182,6 +189,13 @@ export async function checkImageStatus(machines) {
       return {};
     }
   } catch (error) {
+    // Log error for debugging
+    errorService.logError(error, {
+      component: 'imageUtils',
+      action: 'checkImageStatus',
+      metadata: { machineCount: machines?.length || 0 }
+    });
+    
     // Error checking image status - return empty object
     return {};
   }

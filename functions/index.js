@@ -31,8 +31,6 @@ async function downloadAndStoreImage(imageUrl, fileName) {
     const [exists] = await file.exists();
 
     if (exists) {
-      console.log(`Image already exists: ${fileName}, skipping download`);
-
       // Try to get signed URL first
       try {
         const [url] = await file.getSignedUrl({
@@ -41,15 +39,12 @@ async function downloadAndStoreImage(imageUrl, fileName) {
         });
         return {url, action: "skipped"};
       } catch (error) {
-        console.log(
-            `Could not get signed URL for ${fileName}: ${error.message}`,
-        );
         // Fallback to OPDB URL if we can't get signed URL
         return {url: null, action: "skipped"};
       }
     }
 
-    console.log(`Downloading image: ${imageUrl}`);
+    // Downloading image
 
     // Download the image
     const response = await axios.get(imageUrl, {
@@ -79,10 +74,8 @@ async function downloadAndStoreImage(imageUrl, fileName) {
         action: "read",
         expires: "03-01-2500",
       });
-      console.log(`Successfully stored image: ${fileName}`);
       return {url, action: "downloaded"};
     } catch (error) {
-      console.log(`Could not get signed URL for ${fileName}: ${error.message}`);
       // Fallback to OPDB URL if we can't get signed URL
       return {url: null, action: "downloaded"};
     }
@@ -184,7 +177,7 @@ exports.getImageUrl = functions.https.onRequest(async (req, res) => {
         });
         res.json({url});
       } catch (error) {
-        console.log(`Could not get signed URL: ${error.message}`);
+        // Could not get signed URL
         res.status(500).json({error: "Failed to generate image URL"});
       }
     } else {
