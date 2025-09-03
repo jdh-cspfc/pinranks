@@ -2,12 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { useMatchupData } from '../../hooks/useMatchupData';
 import { useImageLoading } from '../../hooks/useImageLoading';
 import { useVoting } from '../../hooks/useVoting';
+import { useAppData } from '../../hooks/useAppData';
 
 import { LoadingError, Message } from '../ErrorDisplay';
 import FilterButtons from './FilterButtons';
 import MatchupDisplay from './MatchupDisplay';
 
-export default function MatchupManager({ user, userPreferences, userPreferencesLoaded, createHandleHaventPlayed }) {
+export default function MatchupManager({ createHandleHaventPlayed }) {
+  const { user, userPreferences, isUserDataLoading } = useAppData();
+  const userPreferencesLoaded = !isUserDataLoading;
   const [filter, setFilter] = useState(['All']);
   
   // Then, get matchup data using the centralized data

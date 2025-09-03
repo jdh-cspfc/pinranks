@@ -3,22 +3,29 @@ import { useDarkMode } from '../DarkModeContext';
 import { signOut } from 'firebase/auth';
 import { auth } from '../firebase';
 import { useAppData } from '../hooks/useAppData';
+import { useBlockedMachines } from '../hooks/useBlockedMachines';
 import { useErrorHandler } from '../hooks/useErrorHandler';
-import { UserDataService } from '../services/dataService';
+import { useConfirmationMessage } from '../hooks/useConfirmationMessage';
 import Card from './Card';
 import { Message } from './ErrorDisplay';
 
 export default function Profile() {
   const { darkMode, setDarkMode } = useDarkMode();
   const { handleError, handleFirebaseError, userError, userSuccess, clearMessages } = useErrorHandler('Profile');
+  const { message: confirmationMessage, showMessage } = useConfirmationMessage();
   const { 
     user, 
     machines, 
     groups, 
-    userPreferences, 
     isLoading, 
-    refreshUserData 
+    isStaticDataLoading,
+    hasStaticData
   } = useAppData();
+  const { 
+    blockedMachines, 
+    removeBlockedMachine, 
+    isLoading: isUserDataLoading 
+  } = useBlockedMachines();
   
   const [showAllMachines, setShowAllMachines] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -33,15 +40,15 @@ export default function Profile() {
 
   const removeFromBlockedList = async (groupId) => {
     try {
-      const newBlockedMachines = userPreferences.blockedMachines.filter(id => id !== groupId);
+      // Find the machine name for the success message
+      const group = groups?.find(g => g.opdb_id === groupId);
+      const machineName = group?.name || `Machine ${groupId}`;
       
-      // Update user preferences through the centralized service
-      await UserDataService.updateUserPreferences(user.uid, { 
-        blockedMachines: newBlockedMachines 
-      });
+      // Use the optimistic removeBlockedMachine function from useAppData
+      await removeBlockedMachine(groupId);
       
-      // Refresh user data to get updated preferences
-      await refreshUserData();
+      // Show success message
+      showMessage(`${machineName} has been removed from your "Haven't Played" list`);
     } catch (err) {
       handleError(err, { 
         action: 'removeFromBlockedList', 
@@ -70,6 +77,16 @@ export default function Profile() {
         onDismiss={clearMessages}
         className="mb-4"
       />
+      
+      {/* Toast Notification */}
+      {confirmationMessage && (
+        <div className="fixed bottom-2 left-1/2 transform -translate-x-1/2 sm:left-auto sm:transform-none sm:right-4 z-50 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 px-3 py-2 rounded-lg shadow-lg max-w-xs mb-4">
+          <div className="flex items-center gap-2">
+            <div className="w-1.5 h-1.5 bg-green-500 rounded-full flex-shrink-0"></div>
+            <span className="text-xs">{confirmationMessage}</span>
+          </div>
+        </div>
+      )}
       
       {/* Dark Mode Toggle */}
       <div className="flex items-center justify-center gap-4 mb-6">
@@ -105,7 +122,20 @@ export default function Profile() {
           Machines You Haven't Played
         </h3>
         
-        {userPreferences.blockedMachines?.length === 0 ? (
+        {/* Show loading state while static data or user data is loading */}
+        {isStaticDataLoading || isUserDataLoading ? (
+          <div className="space-y-2 transition-opacity duration-300">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded border border-gray-200 dark:border-gray-600 animate-pulse">
+                <div className="flex-1">
+                  <div className="h-4 bg-gray-300 dark:bg-gray-600 rounded w-3/4 mb-2"></div>
+                  <div className="h-3 bg-gray-300 dark:bg-gray-600 rounded w-1/2"></div>
+                </div>
+                <div className="w-16 h-6 bg-gray-300 dark:bg-gray-600 rounded ml-3"></div>
+              </div>
+            ))}
+          </div>
+        ) : blockedMachines?.length === 0 ? (
           <p className="text-gray-500 dark:text-gray-400 text-sm">
             You haven't marked any machines as "haven't played" yet. Use the "Haven't Played" button on machine cards to add them to this list.
           </p>
@@ -128,7 +158,24 @@ export default function Profile() {
 
             {/* Filtered machines */}
             {(() => {
-              const filteredMachines = userPreferences.blockedMachines.filter(groupId => {
+              // Don't render machines if we don't have static data yet
+              if (!hasStaticData) {
+                return (
+                  <div className="space-y-2 transition-opacity duration-300">
+                    {[1, 2, 3].map((i) => (
+                      <div key={i} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded border border-gray-200 dark:border-gray-600 animate-pulse">
+                        <div className="flex-1">
+                          <div className="h-4 bg-gray-300 dark:bg-gray-600 rounded w-3/4 mb-2"></div>
+                          <div className="h-3 bg-gray-300 dark:bg-gray-600 rounded w-1/2"></div>
+                        </div>
+                        <div className="w-16 h-6 bg-gray-300 dark:bg-gray-600 rounded ml-3"></div>
+                      </div>
+                    ))}
+                  </div>
+                );
+              }
+
+              const filteredMachines = blockedMachines.filter(groupId => {
                 const group = groups?.find(g => g.opdb_id === groupId);
                 return group?.name?.toLowerCase().includes(searchTerm.toLowerCase());
               });
@@ -146,7 +193,7 @@ export default function Profile() {
               
               return (
                 <>
-                  <div className="space-y-2 mb-3">
+                  <div className="space-y-2 mb-3 transition-opacity duration-300">
                     {machinesToShow.map((groupId) => {
                       const group = groups?.find(g => g.opdb_id === groupId);
                       const displayName = group?.name || `Machine ${groupId}`;

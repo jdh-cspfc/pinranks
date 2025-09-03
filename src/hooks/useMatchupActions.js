@@ -1,22 +1,17 @@
-import { useAppData } from './useAppData';
+/**
+ * Hook for matchup-specific actions like "haven't played"
+ * Handles the complex business logic for machine replacement and user preferences
+ */
+
+import { useBlockedMachines } from './useBlockedMachines';
 import { useConfirmationMessage } from './useConfirmationMessage';
 import { UI_CONSTANTS } from '../constants/appConstants';
 import { useErrorHandler } from './useErrorHandler';
 
-export const useUserPreferences = () => {
-  const { handleError } = useErrorHandler('useUserPreferences');
-  const { 
-    user, 
-    userPreferences, 
-    isLoading: authLoading, 
-    isUserDataLoading,
-    addBlockedMachine, 
-    isMachineBlocked 
-  } = useAppData();
+export const useMatchupActions = () => {
+  const { handleError } = useErrorHandler('useMatchupActions');
+  const { addBlockedMachine } = useBlockedMachines();
   const { message: confirmationMessage, showMessage, clearMessage, cleanup } = useConfirmationMessage();
-
-  // Combined loading state
-  const userPreferencesLoaded = !authLoading && !isUserDataLoading;
 
   // Create a function that can be enhanced with replaceMachine later
   const createHandleHaventPlayed = (replaceMachine) => {
@@ -32,8 +27,6 @@ export const useUserPreferences = () => {
         if (!isMobile) {
           await addBlockedMachine(groupId);
         }
-        
-        // Marking machine as haven't played, about to replace it
         
         // Add a small delay on mobile to ensure state updates are processed
         if (isMobile) {
@@ -53,7 +46,6 @@ export const useUserPreferences = () => {
           // On mobile, still update preferences even if replacement failed
           if (isMobile) {
             await addBlockedMachine(groupId);
-            // Mobile: User preferences updated even though replacement failed
           } else {
             throw new Error('Failed to replace machine. Please try refreshing the page or try again later.');
           }
@@ -63,7 +55,6 @@ export const useUserPreferences = () => {
           // On mobile, update user preferences after successful replacement
           if (isMobile) {
             await addBlockedMachine(groupId);
-            // Mobile: User preferences updated after successful replacement
           }
         }
         
@@ -96,12 +87,9 @@ export const useUserPreferences = () => {
   };
 
   return {
-    user,
-    userPreferences: { blockedMachines: userPreferences.blockedMachines, isMachineBlocked },
-    userPreferencesLoaded,
     confirmationMessage,
     createHandleHaventPlayed,
     clearConfirmationMessage: clearMessage,
     cleanup
   };
-}; 
+};

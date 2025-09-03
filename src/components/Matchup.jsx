@@ -1,9 +1,13 @@
 import React from 'react';
 import { MatchupManager } from './Matchup/index.js';
-import { useUserPreferences } from '../hooks/useUserPreferences';
+import { useAppData } from '../hooks/useAppData';
+import { useMatchupActions } from '../hooks/useMatchupActions';
 
 export default function Matchup() {
-  const { user, userPreferences, userPreferencesLoaded, confirmationMessage, createHandleHaventPlayed } = useUserPreferences();
+  const { user, userPreferences, isUserDataLoading } = useAppData();
+  const { confirmationMessage, createHandleHaventPlayed } = useMatchupActions();
+  
+  const userPreferencesLoaded = !isUserDataLoading;
 
   return (
     <>
@@ -18,9 +22,6 @@ export default function Matchup() {
       )}
       
       <MatchupManager 
-        user={user}
-        userPreferences={userPreferences}
-        userPreferencesLoaded={userPreferencesLoaded}
         createHandleHaventPlayed={createHandleHaventPlayed}
       />
     </>
