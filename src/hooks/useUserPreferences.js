@@ -25,22 +25,15 @@ export const useUserPreferences = () => {
         const machine = matchup.machines[machineIndex];
         const groupId = machine.opdb_id.split('-')[0];
         
-        // Add mobile-specific debugging
+        // Check if mobile device
         const isMobile = window.innerWidth < UI_CONSTANTS.MOBILE_BREAKPOINT;
-        console.log('handleHaventPlayed called:', {
-          machineIndex,
-          machineName: machine.name,
-          groupId,
-          isMobile,
-          currentTime: new Date().toISOString()
-        });
         
         // On mobile, delay updating user preferences until after machine replacement
         if (!isMobile) {
           await addBlockedMachine(groupId);
         }
         
-        console.log('Marking machine as haven\'t played, about to replace it');
+        // Marking machine as haven't played, about to replace it
         
         // Add a small delay on mobile to ensure state updates are processed
         if (isMobile) {
@@ -60,17 +53,17 @@ export const useUserPreferences = () => {
           // On mobile, still update preferences even if replacement failed
           if (isMobile) {
             await addBlockedMachine(groupId);
-            console.log('Mobile: User preferences updated even though replacement failed');
+            // Mobile: User preferences updated even though replacement failed
           } else {
             throw new Error('Failed to replace machine. Please try refreshing the page or try again later.');
           }
         } else {
-          console.log('Machine replacement successful:', { machineIndex, groupId, isMobile });
+          // Machine replacement successful
           
           // On mobile, update user preferences after successful replacement
           if (isMobile) {
             await addBlockedMachine(groupId);
-            console.log('Mobile: User preferences updated after successful replacement');
+            // Mobile: User preferences updated after successful replacement
           }
         }
         

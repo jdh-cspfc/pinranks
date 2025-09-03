@@ -38,11 +38,10 @@ export async function getImageUrl(machine, size = 'large') {
     
     // OPDB fallback disabled for testing to avoid overusing their servers
     // Only return Firebase images during testing
-    console.log(`No Firebase image found for ${machine.opdb_id}, OPDB fallback disabled for testing`);
     imageUrlCache.set(cacheKey, null);
     return null;
   } catch (error) {
-    console.warn(`Failed to resolve image URL for ${machine.opdb_id}:`, error);
+    // Failed to resolve image URL - will use fallback
     // OPDB fallback disabled for testing
     imageUrlCache.set(cacheKey, null);
     return null;
@@ -69,7 +68,7 @@ async function getLocalImageUrl(opdbId, size) {
     
     return null;
   } catch (error) {
-    console.warn(`Failed to get local image URL for ${opdbId}:`, error);
+    // Failed to get local image URL - will use fallback
     return null;
   }
 }
@@ -119,7 +118,7 @@ export async function downloadMachineImages(machine) {
       return { success: false, error };
     }
   } catch (error) {
-    console.error(`Failed to download images for ${machine.opdb_id}:`, error);
+    // Failed to download images - error will be handled by calling component
     return { success: false, error: error.message };
   }
 }
@@ -179,11 +178,11 @@ export async function checkImageStatus(machines) {
       const data = await response.json();
       return data.results;
     } else {
-      console.warn('Failed to check image status:', response.status);
+      // Failed to check image status - return empty object
       return {};
     }
   } catch (error) {
-    console.warn('Error checking image status:', error);
+    // Error checking image status - return empty object
     return {};
   }
 } 

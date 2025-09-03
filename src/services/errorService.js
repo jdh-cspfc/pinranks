@@ -106,15 +106,31 @@ class ErrorService {
    */
   async sendErrorToService(errorEntry) {
     try {
-      // For now, we'll just log to console
       // In production, you might want to send to Firebase Functions, Sentry, etc.
-      console.log('Error reported:', errorEntry);
-      
       // Example Firebase integration:
       // await firebase.functions().httpsCallable('logError')(errorEntry);
       
+      // For now, we'll just store the error for potential future reporting
+      // In a real application, you would:
+      // 1. Send to Firebase Functions for server-side logging
+      // 2. Send to Sentry for error tracking
+      // 3. Send to analytics service for user behavior tracking
+      // 4. Store in local storage for offline error reporting
+      
+      // Store in localStorage for potential debugging (only in development)
+      if (process.env.NODE_ENV === 'development') {
+        const existingErrors = JSON.parse(localStorage.getItem('errorLog') || '[]');
+        existingErrors.push(errorEntry);
+        // Keep only last 50 errors to prevent localStorage bloat
+        if (existingErrors.length > 50) {
+          existingErrors.splice(0, existingErrors.length - 50);
+        }
+        localStorage.setItem('errorLog', JSON.stringify(existingErrors));
+      }
+      
     } catch (reportingError) {
-      console.error('Failed to report error:', reportingError);
+      // Silently fail to avoid infinite error loops
+      // In production, you might want to use a different logging mechanism
     }
   }
 
@@ -248,6 +264,56 @@ class ErrorService {
     });
 
     return userMessage;
+  }
+
+  /**
+   * Get stored error logs (development only)
+   * Useful for debugging and error analysis
+   */
+  getErrorLogs() {
+    if (process.env.NODE_ENV !== 'development') {
+      return [];
+    }
+    
+    try {
+      return JSON.parse(localStorage.getItem('errorLog') || '[]');
+    } catch (error) {
+      return [];
+    }
+  }
+
+  /**
+   * Clear stored error logs (development only)
+   */
+  clearErrorLogs() {
+    if (process.env.NODE_ENV === 'development') {
+      localStorage.removeItem('errorLog');
+    }
+  }
+
+  /**
+   * Get error statistics for monitoring
+   */
+  getErrorStats() {
+    const logs = this.getErrorLogs();
+    const stats = {
+      total: logs.length,
+      byComponent: {},
+      bySeverity: {},
+      recent: logs.slice(-10) // Last 10 errors
+    };
+
+    logs.forEach(log => {
+      // Count by component
+      const component = log.context.component;
+      stats.byComponent[component] = (stats.byComponent[component] || 0) + 1;
+      
+      // Count by severity
+      const severity = log.severity;
+      stats.bySeverity[severity] = (stats.bySeverity[severity] || 0) + 1;
+    });
+
+    return stats;
   }
 }
 

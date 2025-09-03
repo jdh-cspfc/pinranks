@@ -1,4 +1,5 @@
 import React from 'react';
+import errorService from '../services/errorService';
 
 /**
  * Error Boundary component to catch JavaScript errors anywhere in the child component tree,
@@ -26,7 +27,18 @@ class ErrorBoundary extends React.Component {
       errorInfo: errorInfo
     });
 
-    // Log to error service
+    // Log to centralized error service
+    errorService.logError(error, {
+      component: 'ErrorBoundary',
+      action: 'component_crash',
+      metadata: {
+        errorInfo: errorInfo,
+        componentStack: errorInfo.componentStack,
+        errorBoundary: this.props.name || 'Unknown'
+      }
+    });
+
+    // Also call custom error handler if provided
     if (this.props.onError) {
       this.props.onError(error, errorInfo);
     }

@@ -19,18 +19,11 @@ export const useImageLoading = (matchup) => {
       const leftChanged = leftMachineId !== imageStates.left.machineId;
       const rightChanged = rightMachineId !== imageStates.right.machineId;
       
-      console.log('Image state check:', {
-        leftMachineId,
-        rightMachineId,
-        leftChanged,
-        rightChanged,
-        currentLeftId: imageStates.left.machineId,
-        currentRightId: imageStates.right.machineId
-      });
+      // Check if machines have changed
       
       // If no machines have changed, do nothing
       if (!leftChanged && !rightChanged) {
-        console.log('No machines changed, skipping image update');
+        // No machines changed, skipping image update
         return;
       }
       

@@ -19,9 +19,6 @@ export const auth = getAuth(app)
 
 // Set persistence to LOCAL for faster auth checks
 setPersistence(auth, browserLocalPersistence)
-  .then(() => {
-    console.log('Firebase Auth persistence set to LOCAL')
-  })
   .catch((error) => {
     errorService.logError(error, {
       component: 'firebase',

@@ -12,24 +12,8 @@ export default function HaventPlayedButton({
   fetchMatchup 
 }) {
   const { handleError } = useErrorHandler('HaventPlayedButton');
-  // Add mobile-specific debugging for state consistency
-  if (window.innerWidth < 640) {
-    console.log('Mobile: Machine card state check:', {
-      machineIndex: index,
-      groupId,
-      isAlreadyMarked,
-      blockedMachines: userPreferences?.blockedMachines,
-      currentTime: new Date().toISOString()
-    });
-    
-    // Log potential stuck machine scenarios
-    if (isAlreadyMarked) {
-      console.warn('Mobile: Rendering already-marked machine - this might indicate a stuck state:', {
-        groupId,
-        blockedMachines: userPreferences?.blockedMachines
-      });
-    }
-  }
+  // Mobile-specific state consistency checks
+  const isMobile = window.innerWidth < 640;
 
   return (
     <div className="absolute top-0 right-0 w-11 h-11 sm:w-[75px] sm:h-[65px] flex items-center justify-center">
@@ -47,7 +31,6 @@ export default function HaventPlayedButton({
             }
           } else {
             // If machine is already marked but still visible, force a refresh
-            console.warn('Attempting to interact with already-marked machine, forcing refresh');
             fetchMatchup(false, true);
           }
         }}

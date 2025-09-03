@@ -44,7 +44,7 @@ const findFallbackMachine = (machinesData, groupsData, otherGroupId, user, userP
 // Main machine replacement function
 export const replaceMachineInMatchup = async (machineIndex, matchup, filter, user, userPreferences) => {
   try {
-    console.log('Replacing machine at index:', machineIndex);
+    // Replacing machine at index
     
     // Get current machines and groups data
     const [machinesData, groupsData] = await Promise.all([
@@ -77,17 +77,17 @@ export const replaceMachineInMatchup = async (machineIndex, matchup, filter, use
     const validGroups = groupsData.filter(g => groupIdsWithMachines.has(g.opdb_id));
 
     if (validGroups.length === 0) {
-      console.warn('No valid groups available for replacement, trying broader search');
+      // No valid groups available for replacement, trying broader search
       
       // Try fallback approach
       const fallbackMachine = findFallbackMachine(machinesData, groupsData, otherGroupId, user, userPreferences);
       
       if (!fallbackMachine) {
-        console.error('No machines available even with fallback search');
+        // No machines available even with fallback search
         return { success: false, needsRefresh: true };
       }
       
-      console.log('Using fallback machine:', fallbackMachine.name);
+      // Using fallback machine
       return { 
         success: true, 
         newMachine: fallbackMachine 
@@ -99,13 +99,13 @@ export const replaceMachineInMatchup = async (machineIndex, matchup, filter, use
     const newMachine = selectBestMachineForGroup(randomGroup.opdb_id, filteredMachines, randomGroup.name);
 
     if (!newMachine) {
-      console.warn('Could not select a new machine, trying fallback');
+      // Could not select a new machine, trying fallback
       
       // Try to find any machine from the valid groups
       for (const group of validGroups) {
         const fallbackMachine = selectBestMachineForGroup(group.opdb_id, filteredMachines, group.name);
         if (fallbackMachine) {
-          console.log('Using fallback machine from valid group:', fallbackMachine.name);
+          // Using fallback machine from valid group
           return { 
             success: true, 
             newMachine: fallbackMachine 
@@ -114,12 +114,11 @@ export const replaceMachineInMatchup = async (machineIndex, matchup, filter, use
       }
       
       // If still no machine found, force a complete refresh
-      console.error('Could not find replacement machine, forcing refresh');
+      // Could not find replacement machine, forcing refresh
       return { success: false, needsRefresh: true };
     }
 
-    console.log('Replacing machine at index', machineIndex, 'with new machine:', newMachine.name);
-    console.log('Old machine was:', matchup.machines[machineIndex].name);
+    // Replacing machine with new one
     
     return { 
       success: true, 
@@ -127,7 +126,7 @@ export const replaceMachineInMatchup = async (machineIndex, matchup, filter, use
     };
 
   } catch (err) {
-    console.error('Failed to replace machine:', err);
+    // Failed to replace machine - error will be handled by calling component
     return { success: false, needsRefresh: false };
   }
 };

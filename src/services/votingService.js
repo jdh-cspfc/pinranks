@@ -26,12 +26,7 @@ export const saveVoteToFirestore = async (userId, winnerId, loserId) => {
       timestamp: serverTimestamp(),
     });
   } catch (err) {
-    console.error('Failed to save vote:', {
-      userId,
-      winnerId,
-      loserId,
-      error: err.message
-    });
+    // Error will be handled by the calling component via useErrorHandler
     throw err;
   }
 };
@@ -83,12 +78,7 @@ export const updateEloRankings = async (userId, winnerId, loserId, winnerGroup, 
       transaction.set(rankingsRef, { rankings }, { merge: true });
     });
   } catch (err) {
-    console.error('Failed to update Elo rankings:', {
-      userId,
-      winnerId,
-      loserId,
-      error: err.message
-    });
+    // Error will be handled by the calling component via useErrorHandler
     throw err;
   }
 };
@@ -116,7 +106,7 @@ const queueVoteRequest = async (userId, voteFunction) => {
       reject
     });
     
-    console.log(`Added vote request to queue for user ${userId}, queue length: ${userQueue.length}`);
+    // Queue management - no logging needed in production
     
     // If this is the only request in the queue, start processing
     if (userQueue.length === 1) {
@@ -135,18 +125,18 @@ const processQueue = async (userId) => {
     return;
   }
   
-  console.log(`Processing queue for user ${userId}, ${userQueue.length} requests pending`);
+  // Processing queue for user
   
   while (userQueue.length > 0) {
     const request = userQueue[0];
     
     try {
-      console.log(`Processing vote request for user ${userId}`);
+      // Processing vote request
       const result = await request.voteFunction();
       request.resolve(result);
-      console.log(`Vote request completed for user ${userId}`);
+      // Vote request completed
     } catch (error) {
-      console.error(`Vote request failed for user ${userId}:`, error);
+      // Vote request failed - error will be handled by calling component
       request.reject(error);
     }
     
@@ -157,7 +147,7 @@ const processQueue = async (userId) => {
   // Clean up empty queue
   if (userQueue.length === 0) {
     requestQueues.delete(userId);
-    console.log(`Queue cleared for user ${userId}`);
+    // Queue cleared
   }
 };
 
