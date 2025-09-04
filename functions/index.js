@@ -141,11 +141,11 @@ exports.downloadMachineImages = functions.https.onRequest(async (req, res) => {
 //     .schedule("every 24 hours")
 //     .onRun(async (context) => {
 //   try {
-//     console.log("Starting batch image download...");
-//     console.log("Batch download completed");
+//     console.log("🚀 Starting batch image download...");
+//     console.log("✅ Batch download completed");
 //     return null;
 //   } catch (error) {
-//     console.error("Error in batch download:", error);
+//     console.error("❌ Error in batch download:", error);
 //     return null;
 //   }
 // });

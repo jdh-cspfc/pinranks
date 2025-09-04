@@ -7,6 +7,7 @@ import { signOut } from 'firebase/auth'
 import { auth } from './firebase'
 import ErrorBoundary from './components/ErrorBoundary'
 import { useErrorHandler } from './hooks/useErrorHandler'
+import LoggingControls from './components/LoggingControls'
 
 export default function App() {
   const { user, isLoading } = useAppData()
@@ -35,6 +36,7 @@ export default function App() {
         >
           {mainContent}
         </AppLayout>
+        <LoggingControls />
       </DarkModeProvider>
     </ErrorBoundary>
   )

@@ -160,12 +160,15 @@ class ErrorService {
     } = options;
 
     let lastError;
+    console.log(`🔄 withRetry: Starting retry mechanism for ${context.action || 'operation'} (max ${maxRetries} attempts)`);
     
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
+        console.log(`⚡ withRetry: Attempt ${attempt}/${maxRetries} for ${context.action || 'operation'}`);
         return await operation();
       } catch (error) {
         lastError = error;
+        console.log(`❌ withRetry: Attempt ${attempt}/${maxRetries} failed for ${context.action || 'operation'}:`, error.message);
         
         this.logError(error, {
           ...context,
@@ -173,11 +176,13 @@ class ErrorService {
         });
 
         if (attempt === maxRetries) {
+          console.log(`💥 withRetry: All ${maxRetries} attempts failed for ${context.action || 'operation'}`);
           throw error;
         }
 
         // Wait before retrying with exponential backoff
         const waitTime = delay * Math.pow(backoffMultiplier, attempt - 1);
+        console.log(`⏳ withRetry: Waiting ${waitTime}ms before retry ${attempt + 1}/${maxRetries}`);
         await new Promise(resolve => setTimeout(resolve, waitTime));
       }
     }

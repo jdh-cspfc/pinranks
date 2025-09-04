@@ -106,7 +106,8 @@ const queueVoteRequest = async (userId, voteFunction) => {
       reject
     });
     
-    // Queue management - no logging needed in production
+    // Queue management
+    console.log(`📝 Vote request queued for user ${userId} (queue length: ${userQueue.length})`);
     
     // If this is the only request in the queue, start processing
     if (userQueue.length === 1) {
@@ -126,17 +127,20 @@ const processQueue = async (userId) => {
   }
   
   // Processing queue for user
+  console.log(`🔄 Processing queue for user ${userId} (${userQueue.length} requests pending)`);
   
   while (userQueue.length > 0) {
     const request = userQueue[0];
     
     try {
       // Processing vote request
+      console.log(`⚡ Processing vote request for user ${userId} (${userQueue.length} remaining)`);
       const result = await request.voteFunction();
       request.resolve(result);
-      // Vote request completed
+      console.log(`✅ Vote request completed successfully for user ${userId}`);
     } catch (error) {
       // Vote request failed - error will be handled by calling component
+      console.log(`❌ Vote request failed for user ${userId}:`, error.message);
       request.reject(error);
     }
     
@@ -147,7 +151,7 @@ const processQueue = async (userId) => {
   // Clean up empty queue
   if (userQueue.length === 0) {
     requestQueues.delete(userId);
-    // Queue cleared
+    console.log(`🧹 Queue cleared for user ${userId} - all requests processed`);
   }
 };
 
