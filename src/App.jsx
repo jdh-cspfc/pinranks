@@ -1,5 +1,5 @@
 import React from 'react'
-import TopBar from './components/TopBar'
+import AppLayout from './components/AppLayout'
 import { DarkModeProvider } from './DarkModeContext'
 import { useAppData } from './hooks/useAppData'
 import { useAppNavigation } from './hooks/useAppNavigation.jsx'
@@ -25,26 +25,16 @@ export default function App() {
   return (
     <ErrorBoundary onError={(error, errorInfo) => handleError(error, { action: 'app_error', metadata: { errorInfo } })}>
       <DarkModeProvider>
-        {/* Ensure background color fills the viewport in both light and dark mode */}
-        <style>{`
-          html, body {
-            background-color: #f3f4f6 !important;
-          }
-          html.dark, body.dark, .dark html, .dark body {
-            background-color: #111827 !important;
-          }
-        `}</style>
-        <TopBar 
-          user={user} 
-          onProfileClick={() => setActiveView('profile')} 
-          onMenuClick={() => {}} 
-          onNavigate={setActiveView} 
-          onLogout={handleLogout}
+        <AppLayout
+          user={user}
           hasCheckedAuth={hasCheckedAuth}
-        />
-        <div className="min-h-screen bg-gray-100 dark:bg-gray-900 pt-16 p-4">
+          onProfileClick={() => setActiveView('profile')}
+          onMenuClick={() => {}}
+          onNavigate={setActiveView}
+          onLogout={handleLogout}
+        >
           {mainContent}
-        </div>
+        </AppLayout>
       </DarkModeProvider>
     </ErrorBoundary>
   )

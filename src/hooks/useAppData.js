@@ -105,7 +105,7 @@ export const useAppData = () => {
         userPreferences.blockedMachines
       );
       setUserPreferences(prev => ({ ...prev, blockedMachines: newBlockedMachines }));
-      return true;
+      return newBlockedMachines; // Return the updated blocked machines list
     } catch (error) {
       handleError(error, { action: 'addBlockedMachine', metadata: { groupId, userId: user.uid } });
       throw error;

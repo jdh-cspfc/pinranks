@@ -72,8 +72,14 @@ export const useMatchupData = (filter) => {
   }, [filter, user, userPreferences, machines, groups, handleError, withRetry, clearMessages]);
 
   // Replace a specific machine with a new one
-  const replaceMachine = useCallback(async (machineIndex) => {
-    const result = await replaceMachineInMatchup(machineIndex, matchup, filter, user, userPreferences);
+  const replaceMachine = useCallback(async (machineIndex, updatedBlockedMachines = null) => {
+    // Use the provided updated blocked machines list if available, otherwise fall back to current userPreferences
+    const blockedMachinesToUse = updatedBlockedMachines || userPreferences.blockedMachines;
+    const userPreferencesToUse = updatedBlockedMachines ? 
+      { ...userPreferences, blockedMachines: updatedBlockedMachines } : 
+      userPreferences;
+    
+    const result = await replaceMachineInMatchup(machineIndex, matchup, filter, user, userPreferencesToUse);
     
     if (result.needsRefresh) {
       // Force a complete refresh to get new options
