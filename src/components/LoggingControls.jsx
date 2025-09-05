@@ -56,7 +56,7 @@ export default function LoggingControls() {
         onChange={() => handleCategoryToggle(value)}
         className="rounded"
       />
-      <label htmlFor={`category-${value}`} className="text-sm">
+      <label htmlFor={`category-${value}`} className="text-sm text-gray-700 dark:text-gray-200">
         {name} ({value})
       </label>
     </div>
@@ -77,7 +77,7 @@ export default function LoggingControls() {
   return (
     <div className="fixed bottom-4 right-4 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg p-4 w-80 z-50">
       <div className="flex justify-between items-center mb-4">
-        <h3 className="text-lg font-semibold">Logging Controls</h3>
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Logging Controls</h3>
         <button
           onClick={() => setIsOpen(false)}
           className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
@@ -96,14 +96,14 @@ export default function LoggingControls() {
             onChange={handleEnabledToggle}
             className="rounded"
           />
-          <label htmlFor="enabled" className="font-medium">
+          <label htmlFor="enabled" className="font-medium text-gray-700 dark:text-gray-200">
             Enable Logging
           </label>
         </div>
 
         {/* Log Level */}
         <div>
-          <label htmlFor="level" className="block text-sm font-medium mb-1">
+          <label htmlFor="level" className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-200">
             Log Level
           </label>
           <select
@@ -119,7 +119,7 @@ export default function LoggingControls() {
 
         {/* Categories */}
         <div>
-          <label className="block text-sm font-medium mb-2">
+          <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-200">
             Log Categories
           </label>
           <div className="space-y-1 max-h-32 overflow-y-auto">
@@ -137,7 +137,7 @@ export default function LoggingControls() {
               onChange={(e) => logger.updateConfig({ showTimestamp: e.target.checked })}
               className="rounded"
             />
-            <label htmlFor="showTimestamp" className="text-sm">
+            <label htmlFor="showTimestamp" className="text-sm text-gray-700 dark:text-gray-200">
               Show Timestamp
             </label>
           </div>
@@ -149,7 +149,7 @@ export default function LoggingControls() {
               onChange={(e) => logger.updateConfig({ showCategory: e.target.checked })}
               className="rounded"
             />
-            <label htmlFor="showCategory" className="text-sm">
+            <label htmlFor="showCategory" className="text-sm text-gray-700 dark:text-gray-200">
               Show Category
             </label>
           </div>
@@ -161,7 +161,7 @@ export default function LoggingControls() {
               onChange={(e) => logger.updateConfig({ useEmojis: e.target.checked })}
               className="rounded"
             />
-            <label htmlFor="useEmojis" className="text-sm">
+            <label htmlFor="useEmojis" className="text-sm text-gray-700 dark:text-gray-200">
               Use Emojis
             </label>
           </div>
