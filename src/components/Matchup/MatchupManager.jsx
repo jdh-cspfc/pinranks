@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useMatchupData } from '../../hooks/useMatchupData';
 import { useImageLoading } from '../../hooks/useImageLoading';
 import { useVoting } from '../../hooks/useVoting';
@@ -13,6 +13,7 @@ export default function MatchupManager({ createHandleHaventPlayed }) {
   const userPreferencesLoaded = !isUserDataLoading;
   const staticDataLoaded = !isStaticDataLoading && machines && groups;
   const [filter, setFilter] = useState(['All']);
+  const hasInitialized = useRef(false);
   
   // Then, get matchup data using the centralized data
   const { matchup, error, isLoading, isFiltering, isVoting, fetchMatchup, replaceMachine } = useMatchupData(filter);
@@ -25,14 +26,16 @@ export default function MatchupManager({ createHandleHaventPlayed }) {
 
   // ✅ Run on first load - but only after user preferences AND static data are loaded
   useEffect(() => {
-    if (user && userPreferencesLoaded && staticDataLoaded) {
+    if (user && userPreferencesLoaded && staticDataLoaded && !hasInitialized.current) {
+      hasInitialized.current = true;
       fetchMatchup();
     }
   }, [user, userPreferencesLoaded, staticDataLoaded]);
 
   // Refetch when filter changes - but only if we have existing data
   useEffect(() => {
-    if (matchup && !isLoading && userPreferences !== undefined) {
+    // Only run if we have a matchup and we're not loading, and this is not the initial load
+    if (matchup && !isLoading && userPreferences !== undefined && hasInitialized.current) {
       fetchMatchup(true); // Pass true to indicate this is a filter change
     }
   }, [filter]);
@@ -79,6 +82,8 @@ export default function MatchupManager({ createHandleHaventPlayed }) {
         replaceMachine={replaceMachine}
         fetchMatchup={fetchMatchup}
         isMachineBlocked={userPreferences.isMachineBlocked}
+        isLoading={isLoading}
+        isFiltering={isFiltering}
       />
     </>
   );

@@ -12,10 +12,17 @@ export default function MatchupDisplay({
   handleHaventPlayed, 
   replaceMachine, 
   fetchMatchup,
-  isMachineBlocked
+  isMachineBlocked,
+  isLoading,
+  isFiltering
 }) {
   if (!matchup || !matchup.machines || matchup.machines.length < 2) {
     return null; // Removed loading box for testing
+  }
+  
+  // Don't render if we're still loading or filtering
+  if (isLoading || isFiltering) {
+    return null;
   }
   
   if (validMachines.length < 2) {
