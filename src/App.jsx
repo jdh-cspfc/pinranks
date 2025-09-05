@@ -36,7 +36,9 @@ export default function App() {
         >
           {mainContent}
         </AppLayout>
-        <LoggingControls />
+        <div className="hidden md:block">
+          <LoggingControls />
+        </div>
       </DarkModeProvider>
     </ErrorBoundary>
   )
