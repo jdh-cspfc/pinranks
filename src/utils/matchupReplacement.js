@@ -1,4 +1,3 @@
-import { getCachedData } from '../caching';
 import { 
   getFilterGroup, 
   BLOCKED_MANUFACTURERS, 
@@ -47,19 +46,21 @@ export const replaceMachineInMatchup = async (machineIndex, matchup, filter, use
     // Replacing machine at index
     
     // Get current machines and groups data
+    const [machinesResponse, groupsResponse] = await Promise.all([
+      fetch('/machines.json'),
+      fetch('/groups.json')
+    ]);
+    
+    if (!machinesResponse.ok) {
+      throw new Error(`HTTP ${machinesResponse.status}: ${machinesResponse.statusText}`);
+    }
+    if (!groupsResponse.ok) {
+      throw new Error(`HTTP ${groupsResponse.status}: ${groupsResponse.statusText}`);
+    }
+    
     const [machinesData, groupsData] = await Promise.all([
-      getCachedData('machines', () => fetch('/machines.json').then(res => {
-        if (!res.ok) {
-          throw new Error(`HTTP ${res.status}: ${res.statusText}`);
-        }
-        return res.json();
-      }), 604800_000),
-      getCachedData('groups', () => fetch('/groups.json').then(res => {
-        if (!res.ok) {
-          throw new Error(`HTTP ${res.status}: ${res.statusText}`);
-        }
-        return res.json();
-      }), 604800_000),
+      machinesResponse.json(),
+      groupsResponse.json()
     ]);
 
     // Filter machines based on preferences

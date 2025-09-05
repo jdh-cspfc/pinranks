@@ -1,12 +1,5 @@
 // Application-wide constants
 
-// Cache durations
-export const CACHE_DURATION = {
-  SEVEN_DAYS: 604800000, // 7 days in milliseconds
-  ONE_HOUR: 3600000, // 1 hour in milliseconds
-  THIRTY_MINUTES: 1800000 // 30 minutes in milliseconds
-};
-
 // Authentication error messages
 export const AUTH_ERRORS = {
   USER_NOT_FOUND: 'Email not found.',

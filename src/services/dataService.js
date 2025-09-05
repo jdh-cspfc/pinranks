@@ -6,8 +6,6 @@
 import { db, auth } from '../firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
-import { getCachedData } from '../caching';
-import { CACHE_DURATION } from '../constants/appConstants';
 import errorService from './errorService';
 import logger from '../utils/logger';
 
@@ -16,19 +14,19 @@ import logger from '../utils/logger';
  */
 export class StaticDataService {
   static async getMachines() {
-    return getCachedData(
-      'machines', 
-      () => fetch('/machines.json').then(res => res.json()), 
-      CACHE_DURATION.SEVEN_DAYS
-    );
+    const response = await fetch('/machines.json');
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+    return response.json();
   }
 
   static async getGroups() {
-    return getCachedData(
-      'groups', 
-      () => fetch('/groups.json').then(res => res.json()), 
-      CACHE_DURATION.SEVEN_DAYS
-    );
+    const response = await fetch('/groups.json');
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+    return response.json();
   }
 
   static async getMachinesAndGroups() {

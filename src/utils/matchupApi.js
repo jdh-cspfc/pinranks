@@ -1,4 +1,4 @@
-import { getCachedData } from '../caching';
+// Simple API utilities for fetching data
 
 // Helper function to fetch with retry
 export const fetchWithRetry = async (url, retries = 3) => {
@@ -18,17 +18,11 @@ export const fetchWithRetry = async (url, retries = 3) => {
   }
 };
 
-// Helper to fetch machines and groups data with caching
+// Helper to fetch machines and groups data
 export const fetchMachinesAndGroups = async () => {
   const [machinesData, groupsData] = await Promise.all([
-    getCachedData('machines', () => 
-      fetchWithRetry('/machines.json'), 
-      604800_000 // 7 day cache
-    ),
-    getCachedData('groups', () => 
-      fetchWithRetry('/groups.json'), 
-      604800_000 // 7 day cache
-    ),
+    fetchWithRetry('/machines.json'),
+    fetchWithRetry('/groups.json')
   ]);
   
   return { machinesData, groupsData };
