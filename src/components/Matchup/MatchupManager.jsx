@@ -2,21 +2,20 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useMatchupData } from '../../hooks/useMatchupData';
 import { useImageLoading } from '../../hooks/useImageLoading';
 import { useVoting } from '../../hooks/useVoting';
-import { useAppData } from '../../hooks/useAppData';
 
 import { LoadingError, Message } from '../ErrorDisplay';
 import FilterButtons from './FilterButtons';
 import MatchupDisplay from './MatchupDisplay';
 
-export default function MatchupManager({ createHandleHaventPlayed }) {
-  const { user, userPreferences, isUserDataLoading, machines, groups, isStaticDataLoading } = useAppData();
+export default function MatchupManager({ createHandleHaventPlayed, appData }) {
+  const { user, userPreferences, isUserDataLoading, machines, groups, isStaticDataLoading } = appData;
   const userPreferencesLoaded = !isUserDataLoading;
   const staticDataLoaded = !isStaticDataLoading && machines && groups;
   const [filter, setFilter] = useState(['All']);
   const hasInitialized = useRef(false);
   
   // Then, get matchup data using the centralized data
-  const { matchup, error, isLoading, isFiltering, isVoting, fetchMatchup, replaceMachine } = useMatchupData(filter);
+  const { matchup, error, isLoading, isFiltering, isVoting, fetchMatchup, replaceMachine } = useMatchupData(filter, appData);
   
   // Create the handleHaventPlayed function with the replaceMachine dependency
   const handleHaventPlayed = createHandleHaventPlayed(replaceMachine);

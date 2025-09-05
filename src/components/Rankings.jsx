@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { useRankingsData } from '../hooks/useRankingsData';
 import { useInfiniteScroll } from '../hooks/useInfiniteScroll';
 import RankingsFilters from './Rankings/RankingsFilters';
 import RankingsList from './Rankings/RankingsList';
@@ -9,11 +8,18 @@ import Card from './Card';
  * Main Rankings component - now much simpler and focused
  * Uses custom hooks for data management and infinite scroll
  */
-export default function Rankings() {
+export default function Rankings({ appData }) {
   const [activeTab, setActiveTab] = useState('All');
   
-  // Custom hooks for data and scroll management
-  const { user, rankings, machines, groups, loading, rankingsLoading } = useRankingsData();
+  // Extract data from appData prop instead of calling useRankingsData
+  const { 
+    user, 
+    userRankings: rankings, 
+    machines, 
+    groups, 
+    isLoading: loading, 
+    isUserDataLoading: rankingsLoading 
+  } = appData;
   const { 
     displayedCount, 
     hasMore, 

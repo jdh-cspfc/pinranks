@@ -8,9 +8,9 @@ import { useConfirmationMessage } from './useConfirmationMessage';
 import { UI_CONSTANTS } from '../constants/appConstants';
 import { useErrorHandler } from './useErrorHandler';
 
-export const useMatchupActions = () => {
+export const useMatchupActions = (appData) => {
   const { handleError, handleAsyncOperation } = useErrorHandler('useMatchupActions');
-  const { addBlockedMachine, blockedMachines } = useBlockedMachines();
+  const { addBlockedMachine, blockedMachines } = useBlockedMachines(appData);
   const { message: confirmationMessage, showMessage, clearMessage, cleanup } = useConfirmationMessage();
 
   // Create a function that can be enhanced with replaceMachine later

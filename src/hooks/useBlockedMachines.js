@@ -3,10 +3,9 @@
  * Provides a clean API for adding/removing blocked machines
  */
 
-import { useAppData } from './useAppData';
 import { useErrorHandler } from './useErrorHandler';
 
-export const useBlockedMachines = () => {
+export const useBlockedMachines = (appData) => {
   const { handleError } = useErrorHandler('useBlockedMachines');
   const { 
     user, 
@@ -15,7 +14,7 @@ export const useBlockedMachines = () => {
     addBlockedMachine, 
     removeBlockedMachine, 
     isMachineBlocked 
-  } = useAppData();
+  } = appData;
 
   return {
     // Data

@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useAppData } from './useAppData';
 import { useErrorHandler } from './useErrorHandler';
 import { 
   filterMachinesByPreferences, 
@@ -8,8 +7,8 @@ import {
 import { replaceMachineInMatchup } from '../utils/matchupReplacement';
 import logger from '../utils/logger';
 
-export const useMatchupData = (filter) => {
-  const { machines, groups, user, userPreferences } = useAppData();
+export const useMatchupData = (filter, appData) => {
+  const { machines, groups, user, userPreferences } = appData;
   const { handleError, withRetry, userError, clearMessages } = useErrorHandler('useMatchupData');
   const [matchup, setMatchup] = useState(null);
   const [isLoading, setIsLoading] = useState(false);

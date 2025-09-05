@@ -10,9 +10,10 @@ import { useErrorHandler } from './hooks/useErrorHandler'
 import LoggingControls from './components/LoggingControls'
 
 export default function App() {
-  const { user, isLoading } = useAppData()
+  const appData = useAppData()
+  const { user, isLoading } = appData || {}
   const hasCheckedAuth = !isLoading
-  const { activeView, setActiveView, mainContent } = useAppNavigation(user, hasCheckedAuth)
+  const { activeView, setActiveView, mainContent } = useAppNavigation(user, hasCheckedAuth, appData)
   const { handleError } = useErrorHandler('App')
   
   const handleLogout = async () => {
@@ -21,6 +22,19 @@ export default function App() {
     } catch (error) {
       handleError(error, { action: 'logout' })
     }
+  }
+
+  // Don't render anything if appData is not available yet
+  if (!appData) {
+    return (
+      <ErrorBoundary onError={(error, errorInfo) => handleError(error, { action: 'app_error', metadata: { errorInfo } })}>
+        <DarkModeProvider>
+          <div className="flex justify-center items-center h-screen">
+            <div className="text-gray-500">Loading...</div>
+          </div>
+        </DarkModeProvider>
+      </ErrorBoundary>
+    )
   }
 
   return (
