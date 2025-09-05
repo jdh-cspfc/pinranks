@@ -33,12 +33,10 @@
 
 /* Mobile-specific fixes */
 @layer base {
-  /* Prevent overscroll on mobile */
+  /* Prevent overscroll on mobile but allow pull-to-refresh */
   body {
-    overscroll-behavior: none;
-    position: fixed;
-    width: 100%;
-    height: 100%;
+    overscroll-behavior-y: auto;
+    overscroll-behavior-x: none;
   }
   
   /* Fix for iOS Safari viewport issues */
@@ -46,13 +44,9 @@
     .ios-viewport-fix {
       height: -webkit-fill-available;
     }
-    
-    body {
-      height: -webkit-fill-available;
-    }
   }
   
-  /* Prevent address bar resize issues on Android */
+  /* Mobile viewport handling without breaking pull-to-refresh */
   @media screen and (max-width: 768px) {
     html {
       height: 100%;
@@ -64,7 +58,8 @@
       height: 100%;
       height: 100vh;
       height: 100dvh;
-      overflow: hidden;
+      min-height: 100vh;
+      min-height: 100dvh;
     }
   }
 }
@@ -78,6 +73,15 @@
     min-height: calc(100vh - 200px);
     max-height: calc(100vh - 200px);
     overflow: hidden;
+  }
+  
+  /* Allow pull-to-refresh by making container scrollable when needed */
+  @media screen and (max-width: 768px) {
+    .mobile-card-container {
+      height: calc(100vh - 180px);
+      min-height: calc(100vh - 180px);
+      max-height: calc(100vh - 180px);
+    }
   }
   
   .mobile-card {
@@ -98,9 +102,9 @@
   /* iPhone-specific adjustments */
   @supports (-webkit-touch-callout: none) {
     .mobile-card-container {
-      height: calc(100vh - 240px);
-      min-height: calc(100vh - 240px);
-      max-height: calc(100vh - 240px);
+      height: calc(100vh - 220px);
+      min-height: calc(100vh - 220px);
+      max-height: calc(100vh - 220px);
     }
   }
 }

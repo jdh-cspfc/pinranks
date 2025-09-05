@@ -24,7 +24,7 @@ export default function AppLayout({
         onLogout={onLogout}
         hasCheckedAuth={hasCheckedAuth}
       />
-      <div className="min-h-screen bg-gray-100 dark:bg-gray-900 pt-16 p-4 overflow-auto" style={{ height: '100vh', height: '100dvh' }}>
+      <div className="min-h-screen bg-gray-100 dark:bg-gray-900 pt-16 p-4">
         {children}
       </div>
     </>
