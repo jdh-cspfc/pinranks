@@ -9,8 +9,9 @@ import FilterButtons from './FilterButtons';
 import MatchupDisplay from './MatchupDisplay';
 
 export default function MatchupManager({ createHandleHaventPlayed }) {
-  const { user, userPreferences, isUserDataLoading } = useAppData();
+  const { user, userPreferences, isUserDataLoading, machines, groups, isStaticDataLoading } = useAppData();
   const userPreferencesLoaded = !isUserDataLoading;
+  const staticDataLoaded = !isStaticDataLoading && machines && groups;
   const [filter, setFilter] = useState(['All']);
   
   // Then, get matchup data using the centralized data
@@ -22,12 +23,12 @@ export default function MatchupManager({ createHandleHaventPlayed }) {
   const { imageStates, bothImagesReady } = useImageLoading(matchup);
   const { clickedCard, handleVote, voteError, voteSuccess, clearVoteMessages } = useVoting(user, matchup, fetchMatchup);
 
-  // ✅ Run on first load - but only after user preferences are loaded
+  // ✅ Run on first load - but only after user preferences AND static data are loaded
   useEffect(() => {
-    if (user && userPreferencesLoaded) {
+    if (user && userPreferencesLoaded && staticDataLoaded) {
       fetchMatchup();
     }
-  }, [user, userPreferencesLoaded]);
+  }, [user, userPreferencesLoaded, staticDataLoaded]);
 
   // Refetch when filter changes - but only if we have existing data
   useEffect(() => {
@@ -45,8 +46,8 @@ export default function MatchupManager({ createHandleHaventPlayed }) {
     );
   }
 
-  // Show loading if user preferences haven't been loaded yet
-  if (!userPreferencesLoaded) {
+  // Show loading if user preferences or static data haven't been loaded yet
+  if (!userPreferencesLoaded || !staticDataLoaded) {
     return null; // Removed loading box for testing
   }
 

@@ -37,8 +37,7 @@ export const useMatchupData = (filter) => {
   // Main function to fetch matchup data
   const fetchMatchup = useCallback(async (isFilterChange = false, isVoteChange = false) => {
     if (!machines || !groups) {
-      logger.error('data', 'Machines and groups data not available');
-      handleError('Machines and groups data not available', { action: 'fetchMatchup_validation' });
+      logger.debug('data', 'Machines and groups data not yet available, skipping fetch');
       return;
     }
 
