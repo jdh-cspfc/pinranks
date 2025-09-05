@@ -13,6 +13,22 @@ const admin = require("firebase-admin");
 const axios = require("axios");
 const sharp = require("sharp");
 
+// Simple logger for Firebase Functions
+const logger = {
+  error: (category, message, ...args) => {
+    console.error(`[${category.toUpperCase()}] ${message}`, ...args);
+  },
+  warn: (category, message, ...args) => {
+    console.warn(`[${category.toUpperCase()}] ${message}`, ...args);
+  },
+  info: (category, message, ...args) => {
+    console.info(`[${category.toUpperCase()}] ${message}`, ...args);
+  },
+  debug: (category, message, ...args) => {
+    console.log(`[${category.toUpperCase()}] ${message}`, ...args);
+  }
+};
+
 admin.initializeApp();
 
 const bucket = admin.storage().bucket();
@@ -80,10 +96,7 @@ async function downloadAndStoreImage(imageUrl, fileName) {
       return {url: null, action: "downloaded"};
     }
   } catch (error) {
-    console.error(
-        `Failed to download/store image ${imageUrl}:`,
-        error.message,
-    );
+    logger.error('firebase', `Failed to download/store image ${imageUrl}: ${error.message}`);
     return null;
   }
 }
@@ -130,7 +143,7 @@ exports.downloadMachineImages = functions.https.onRequest(async (req, res) => {
       actions: actions,
     });
   } catch (error) {
-    console.error("Error in downloadMachineImages:", error);
+    logger.error('firebase', `Error in downloadMachineImages: ${error.message}`);
     res.status(500).json({error: "Internal server error"});
   }
 });
@@ -184,7 +197,7 @@ exports.getImageUrl = functions.https.onRequest(async (req, res) => {
       res.status(404).json({error: "Image not found"});
     }
   } catch (error) {
-    console.error("Error in getImageUrl:", error);
+    logger.error('firebase', `Error in getImageUrl: ${error.message}`);
     res.status(500).json({error: "Internal server error"});
   }
 });
@@ -235,7 +248,7 @@ exports.checkImageStatus = functions.https.onRequest(async (req, res) => {
 
     res.json({results});
   } catch (error) {
-    console.error("Error in checkImageStatus:", error);
+    logger.error('firebase', `Error in checkImageStatus: ${error.message}`);
     res.status(500).json({error: "Internal server error"});
   }
 });

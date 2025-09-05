@@ -9,6 +9,7 @@ import { onAuthStateChanged } from 'firebase/auth';
 import { getCachedData } from '../caching';
 import { CACHE_DURATION } from '../constants/appConstants';
 import errorService from './errorService';
+import logger from '../utils/logger';
 
 /**
  * Static data service for machines and groups
@@ -45,23 +46,23 @@ export class StaticDataService {
 export class UserDataService {
   static async getUserPreferences(userId) {
     if (!userId) {
-      console.log('❌ getUserPreferences: No userId provided');
+      logger.error('firebase', 'getUserPreferences: No userId provided');
       return null;
     }
     
     try {
-      console.log(`🔍 getUserPreferences: Fetching preferences for user ${userId}`);
+      logger.debug('firebase', `Fetching preferences for user ${userId}`);
       const userPrefsRef = doc(db, 'userPreferences', userId);
       const userPrefsSnap = await getDoc(userPrefsRef);
       
       if (userPrefsSnap.exists()) {
-        console.log(`✅ getUserPreferences: Found preferences for user ${userId}`);
+        logger.debug('firebase', `Found preferences for user ${userId}`);
         return userPrefsSnap.data();
       }
-      console.log(`ℹ️ getUserPreferences: No preferences found for user ${userId}, returning defaults`);
+      logger.info('firebase', `No preferences found for user ${userId}, returning defaults`);
       return { blockedMachines: [] };
     } catch (error) {
-      console.log(`❌ getUserPreferences: Error fetching preferences for user ${userId}:`, error.message);
+      logger.error('firebase', `Error fetching preferences for user ${userId}: ${error.message}`);
       errorService.logError(error, {
         component: 'UserDataService',
         action: 'getUserPreferences',
@@ -73,18 +74,18 @@ export class UserDataService {
 
   static async getUserRankings(userId) {
     if (!userId) {
-      console.log('❌ getUserRankings: No userId provided');
+      logger.error('firebase', 'getUserRankings: No userId provided');
       return null;
     }
     
     try {
-      console.log(`🔍 getUserRankings: Fetching rankings for user ${userId}`);
+      logger.debug('firebase', `Fetching rankings for user ${userId}`);
       const rankingsRef = doc(db, 'userRankings', userId);
       const rankingsSnap = await getDoc(rankingsRef);
       
       if (rankingsSnap.exists()) {
         const data = rankingsSnap.data().rankings || {};
-        console.log(`📊 getUserRankings: Found ${Object.keys(data).length} rankings for user ${userId}`);
+        logger.debug('firebase', `Found ${Object.keys(data).length} rankings for user ${userId}`);
         // Process rankings data into sorted array
         const processedRankings = Object.entries(data)
           .map(([machineId, eloObj]) => ({
@@ -92,13 +93,13 @@ export class UserDataService {
             eloObj: eloObj && typeof eloObj === 'object' ? eloObj : { all: eloObj ?? 1200 }
           }))
           .sort((a, b) => (b.eloObj.all ?? 1200) - (a.eloObj.all ?? 1200));
-        console.log(`✅ getUserRankings: Processed ${processedRankings.length} rankings for user ${userId}`);
+        logger.debug('firebase', `Processed ${processedRankings.length} rankings for user ${userId}`);
         return processedRankings;
       }
-      console.log(`ℹ️ getUserRankings: No rankings found for user ${userId}`);
+      logger.info('firebase', `No rankings found for user ${userId}`);
       return [];
     } catch (error) {
-      console.log(`❌ getUserRankings: Error fetching rankings for user ${userId}:`, error.message);
+      logger.error('firebase', `Error fetching rankings for user ${userId}: ${error.message}`);
       errorService.logError(error, {
         component: 'UserDataService',
         action: 'getUserRankings',
@@ -112,16 +113,16 @@ export class UserDataService {
     if (!userId) throw new Error('User ID is required');
     
     try {
-      console.log(`💾 updateUserPreferences: Updating preferences for user ${userId}`, Object.keys(preferences));
+      logger.debug('firebase', `Updating preferences for user ${userId}`, Object.keys(preferences));
       const userPrefsRef = doc(db, 'userPreferences', userId);
       await setDoc(userPrefsRef, {
         ...preferences,
         lastUpdated: new Date().toISOString()
       }, { merge: true });
-      console.log(`✅ updateUserPreferences: Successfully updated preferences for user ${userId}`);
+      logger.info('firebase', `Successfully updated preferences for user ${userId}`);
       return true;
     } catch (error) {
-      console.log(`❌ updateUserPreferences: Error updating preferences for user ${userId}:`, error.message);
+      logger.error('firebase', `Error updating preferences for user ${userId}: ${error.message}`);
       errorService.logError(error, {
         component: 'UserDataService',
         action: 'updateUserPreferences',
@@ -132,10 +133,10 @@ export class UserDataService {
   }
 
   static async addBlockedMachine(userId, groupId, currentBlockedMachines) {
-    console.log(`🚫 addBlockedMachine: Adding ${groupId} to blocked machines for user ${userId}`);
+    logger.info('firebase', `Adding ${groupId} to blocked machines for user ${userId}`);
     const newBlockedMachines = [...currentBlockedMachines, groupId];
     await this.updateUserPreferences(userId, { blockedMachines: newBlockedMachines });
-    console.log(`✅ addBlockedMachine: Successfully added ${groupId} to blocked machines for user ${userId}`);
+    logger.info('firebase', `Successfully added ${groupId} to blocked machines for user ${userId}`);
     return newBlockedMachines;
   }
 }

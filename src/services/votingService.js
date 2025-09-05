@@ -6,6 +6,7 @@
 import { db } from '../firebase';
 import { collection, addDoc, serverTimestamp, doc, runTransaction } from 'firebase/firestore';
 import { calculateElo, ELO_CONFIG } from './eloService';
+import logger from '../utils/logger';
 
 // Request queue to prevent concurrent writes to the same user's rankings
 const requestQueues = new Map();
@@ -107,7 +108,7 @@ const queueVoteRequest = async (userId, voteFunction) => {
     });
     
     // Queue management
-    console.log(`📝 Vote request queued for user ${userId} (queue length: ${userQueue.length})`);
+    logger.info('voting', `Vote request queued for user ${userId} (queue length: ${userQueue.length})`);
     
     // If this is the only request in the queue, start processing
     if (userQueue.length === 1) {
@@ -127,20 +128,20 @@ const processQueue = async (userId) => {
   }
   
   // Processing queue for user
-  console.log(`🔄 Processing queue for user ${userId} (${userQueue.length} requests pending)`);
+  logger.debug('voting', `Processing queue for user ${userId} (${userQueue.length} requests pending)`);
   
   while (userQueue.length > 0) {
     const request = userQueue[0];
     
     try {
       // Processing vote request
-      console.log(`⚡ Processing vote request for user ${userId} (${userQueue.length} remaining)`);
+      logger.debug('voting', `Processing vote request for user ${userId} (${userQueue.length} remaining)`);
       const result = await request.voteFunction();
       request.resolve(result);
-      console.log(`✅ Vote request completed successfully for user ${userId}`);
+      logger.info('voting', `Vote request completed successfully for user ${userId}`);
     } catch (error) {
       // Vote request failed - error will be handled by calling component
-      console.log(`❌ Vote request failed for user ${userId}:`, error.message);
+      logger.error('voting', `Vote request failed for user ${userId}: ${error.message}`);
       request.reject(error);
     }
     
@@ -151,7 +152,7 @@ const processQueue = async (userId) => {
   // Clean up empty queue
   if (userQueue.length === 0) {
     requestQueues.delete(userId);
-    console.log(`🧹 Queue cleared for user ${userId} - all requests processed`);
+    logger.debug('voting', `Queue cleared for user ${userId} - all requests processed`);
   }
 };
 

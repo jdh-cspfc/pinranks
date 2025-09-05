@@ -3,6 +3,8 @@
  * Provides consistent error handling across the application
  */
 
+import logger from '../utils/logger';
+
 class ErrorService {
   constructor() {
     this.errorQueue = [];
@@ -44,13 +46,8 @@ class ErrorService {
       severity: context.severity || 'error'
     };
 
-    // Log to console in development (using proper console methods)
-    if (process.env.NODE_ENV === 'development') {
-      console.group(`🚨 Error in ${errorEntry.context.component}`);
-      console.error('Error:', error);
-      console.info('Context:', errorEntry.context);
-      console.groupEnd();
-    }
+    // Log to centralized logger
+    logger.error('error', `Error in ${errorEntry.context.component}: ${this.serializeError(error).message}`, errorEntry.context);
 
     // Store error for potential reporting
     this.errorQueue.push(errorEntry);
@@ -160,15 +157,15 @@ class ErrorService {
     } = options;
 
     let lastError;
-    console.log(`🔄 withRetry: Starting retry mechanism for ${context.action || 'operation'} (max ${maxRetries} attempts)`);
+    logger.debug('error', `Starting retry mechanism for ${context.action || 'operation'} (max ${maxRetries} attempts)`);
     
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
-        console.log(`⚡ withRetry: Attempt ${attempt}/${maxRetries} for ${context.action || 'operation'}`);
+        logger.debug('error', `Attempt ${attempt}/${maxRetries} for ${context.action || 'operation'}`);
         return await operation();
       } catch (error) {
         lastError = error;
-        console.log(`❌ withRetry: Attempt ${attempt}/${maxRetries} failed for ${context.action || 'operation'}:`, error.message);
+        logger.warn('error', `Attempt ${attempt}/${maxRetries} failed for ${context.action || 'operation'}: ${error.message}`);
         
         this.logError(error, {
           ...context,
@@ -176,13 +173,13 @@ class ErrorService {
         });
 
         if (attempt === maxRetries) {
-          console.log(`💥 withRetry: All ${maxRetries} attempts failed for ${context.action || 'operation'}`);
+          logger.error('error', `All ${maxRetries} attempts failed for ${context.action || 'operation'}`);
           throw error;
         }
 
         // Wait before retrying with exponential backoff
         const waitTime = delay * Math.pow(backoffMultiplier, attempt - 1);
-        console.log(`⏳ withRetry: Waiting ${waitTime}ms before retry ${attempt + 1}/${maxRetries}`);
+        logger.debug('error', `Waiting ${waitTime}ms before retry ${attempt + 1}/${maxRetries}`);
         await new Promise(resolve => setTimeout(resolve, waitTime));
       }
     }
