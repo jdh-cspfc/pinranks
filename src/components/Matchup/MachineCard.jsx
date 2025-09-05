@@ -33,12 +33,11 @@ export default function MachineCard({
   return (
     <div
       key={`${groupId}-${index}-${machine.opdb_id}`}
-      className={`border p-3 sm:p-4 rounded shadow bg-white dark:bg-gray-800 text-center border-gray-200 dark:border-gray-700 flex flex-col items-center flex-1 sm:h-[70vh] overflow-auto cursor-pointer sm:hover:shadow-lg sm:hover:bg-blue-50 dark:sm:hover:bg-gray-700 transition-all duration-100 ease-out relative ${
+      className={`mobile-card sm:h-[70vh] border p-3 sm:p-4 rounded shadow bg-white dark:bg-gray-800 text-center border-gray-200 dark:border-gray-700 items-center overflow-auto cursor-pointer sm:hover:shadow-lg sm:hover:bg-blue-50 dark:sm:hover:bg-gray-700 transition-all duration-100 ease-out relative ${
         isClicked 
           ? 'scale-[0.98] sm:bg-blue-50 dark:sm:hover:bg-gray-600' 
           : 'scale-100'
       }`}
-      style={{ minHeight: 0 }}
       onClick={() => {
         if (TopBar.justClosedMenuRef && TopBar.justClosedMenuRef.current) {
           TopBar.justClosedMenuRef.current = false;

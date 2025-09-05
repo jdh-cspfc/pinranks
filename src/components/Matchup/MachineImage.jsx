@@ -7,8 +7,8 @@ export default function MachineImage({ machine, name, imageUrl, imageState }) {
     return (
       <>
         {/* Mobile layout */}
-        <div className="flex-1 flex items-center justify-center sm:hidden">
-          <div className="mx-auto mb-2 flex items-center justify-center w-full h-[18vh]">
+        <div className="mobile-card-image sm:hidden">
+          <div className="mx-auto mb-2 flex items-center justify-center w-full h-full">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 dark:border-blue-400"></div>
           </div>
         </div>
@@ -29,12 +29,17 @@ export default function MachineImage({ machine, name, imageUrl, imageState }) {
   return (
     <>
       {/* Mobile layout */}
-      <div className="flex-1 flex items-center justify-center sm:hidden">
+      <div className="mobile-card-image sm:hidden">
         <img
           src={imageUrl}
           alt={name}
-          className="mx-auto mb-2 object-contain max-h-[18vh] w-auto"
-          style={{ maxWidth: '100%' }}
+          className="mx-auto mb-2 object-contain w-auto"
+          style={{ 
+            maxHeight: '100%',
+            maxWidth: '100%',
+            height: 'auto',
+            width: 'auto'
+          }}
         />
       </div>
       {/* Desktop layout */}

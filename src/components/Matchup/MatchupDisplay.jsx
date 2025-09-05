@@ -28,8 +28,7 @@ export default function MatchupDisplay({
 
   return (
     <div 
-      className={`flex flex-col sm:grid sm:grid-cols-2 gap-3 sm:gap-6 ${isVoting ? 'opacity-75 pointer-events-none' : ''}`} 
-      style={{ height: 'calc(87vh - 110px)' }}
+      className={`mobile-card-container sm:grid sm:grid-cols-2 gap-3 sm:gap-6 ${isVoting ? 'opacity-75 pointer-events-none' : ''}`} 
     >
       {validMachines.map((machine, i) => (
         <MachineCard
