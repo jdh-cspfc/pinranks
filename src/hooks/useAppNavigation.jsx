@@ -4,10 +4,10 @@ import Matchup from '../components/Matchup'
 import Profile from '../components/Profile'
 import Rankings from '../components/Rankings'
 
-export const useAppNavigation = (user, hasCheckedAuth, appData) => {
+export const useAppNavigation = () => {
   const [activeView, setActiveView] = useState('matchups')
 
-  const getMainContent = () => {
+  const getMainContent = (user, hasCheckedAuth, appData) => {
     if (!hasCheckedAuth) {
       // Before auth check, show loading state
       return () => <div className="flex justify-center items-center h-64">
@@ -39,11 +39,9 @@ export const useAppNavigation = (user, hasCheckedAuth, appData) => {
     }
   }
 
-  const MainContentComponent = getMainContent()
-
   return {
     activeView,
     setActiveView,
-    mainContent: <MainContentComponent />
+    getMainContent
   }
 }
