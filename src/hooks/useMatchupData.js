@@ -12,7 +12,7 @@ export const useMatchupData = (filter) => {
   const { machines, groups, user, userPreferences } = useAppData();
   const { handleError, withRetry, userError, clearMessages } = useErrorHandler('useMatchupData');
   const [matchup, setMatchup] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [isFiltering, setIsFiltering] = useState(false);
   const [isVoting, setIsVoting] = useState(false);
 

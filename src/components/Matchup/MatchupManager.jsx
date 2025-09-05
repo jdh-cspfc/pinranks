@@ -51,7 +51,20 @@ export default function MatchupManager({ createHandleHaventPlayed }) {
 
   // Show loading if user preferences or static data haven't been loaded yet
   if (!userPreferencesLoaded || !staticDataLoaded) {
-    return null; // Removed loading box for testing
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="text-gray-500">Loading...</div>
+      </div>
+    );
+  }
+
+  // Show loading if we haven't initialized yet (waiting for first fetch)
+  if (!hasInitialized.current) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="text-gray-500">Loading matchups...</div>
+      </div>
+    );
   }
 
   // Filter out null machines (only when matchup exists)
@@ -59,8 +72,10 @@ export default function MatchupManager({ createHandleHaventPlayed }) {
 
   return (
     <>
-      {/* Filter Buttons */}
-      <FilterButtons filter={filter} onFilterChange={setFilter} />
+      {/* Filter Buttons - only show when we have a matchup */}
+      {matchup && (
+        <FilterButtons filter={filter} onFilterChange={setFilter} />
+      )}
       
       {/* Voting Error/Success Messages */}
       <Message 
