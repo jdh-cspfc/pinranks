@@ -8,7 +8,7 @@ export const FILTER_OPTIONS = [
   { label: 'EM', value: 'EM' },
   { label: 'Solid State', value: 'Solid State' },
   { label: 'DMD', value: 'DMD' },
-  { label: 'LCD', value: 'LCD' },
+  { label: 'Modern', value: 'Modern' },
 ];
 
 /**
@@ -19,13 +19,13 @@ export const DISPLAY_TO_FILTER_MAP = {
   'lights': 'EM', 
   'alphanumeric': 'Solid State',
   'dmd': 'DMD',
-  'lcd': 'LCD'
+  'lcd': 'Modern'
 };
 
 /**
  * Modern filter groups (LCD and DMD)
  */
-export const MODERN_FILTERS = ['LCD', 'DMD'];
+export const MODERN_FILTERS = ['Modern', 'DMD'];
 
 /**
  * Legacy filter groups (EM and Solid State)

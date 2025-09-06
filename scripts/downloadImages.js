@@ -158,7 +158,7 @@ const PRIORITY_TO_FILTER_MAP = {
   'alphanumeric': 'Solid State',
   'reels': 'EM',
   'dmd': 'DMD',
-  'lcd': 'LCD',
+  'lcd': 'Modern',
   'modern': 'modern',
   'all': 'all'
 };
