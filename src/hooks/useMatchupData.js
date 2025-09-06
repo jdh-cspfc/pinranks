@@ -4,7 +4,6 @@ import {
   filterMachinesByPreferences, 
   selectRandomMatchup 
 } from '../utils/matchupSelectors';
-import { replaceMachineInMatchup } from '../utils/matchupReplacement';
 import logger from '../utils/logger';
 
 export const useMatchupData = (filter, appData) => {
@@ -78,51 +77,15 @@ export const useMatchupData = (filter, appData) => {
     }
   }, [filter, user, userPreferences, machines, groups, handleError, withRetry, clearMessages]);
 
-  // Replace a specific machine with a new one
-  const replaceMachine = useCallback(async (machineIndex, updatedBlockedMachines = null) => {
-    logger.debug('data', `Attempting to replace machine at index ${machineIndex}`);
-    
-    // Use the provided updated blocked machines list if available, otherwise fall back to current userPreferences
-    const blockedMachinesToUse = updatedBlockedMachines || userPreferences.blockedMachines;
-    const userPreferencesToUse = updatedBlockedMachines ? 
-      { ...userPreferences, blockedMachines: updatedBlockedMachines } : 
-      userPreferences;
-    
-    const result = await replaceMachineInMatchup(machineIndex, matchup, filter, user, userPreferencesToUse);
-    
-    if (result.needsRefresh) {
-      logger.debug('data', 'Needs refresh, fetching new matchup');
-      // Force a complete refresh to get new options
-      fetchMatchup(false, true);
-      return false;
-    }
-    
-    if (result.success && result.newMachine) {
-      logger.info('data', `Successfully replaced machine with ${result.newMachine.name}`);
-      // Update the matchup with the new machine
-      const newMachines = [...matchup.machines];
-      newMachines[machineIndex] = result.newMachine;
-      
-      setMatchup({
-        machines: newMachines,
-        groups: matchup.groups,
-      });
-      
-      return true; // Success
-    }
-    
-    logger.warn('data', 'Failed to replace machine');
-    return false; // Failed
-  }, [matchup, filter, user, userPreferences, fetchMatchup]);
 
   return {
     matchup,
+    setMatchup,
     error: userError, // Use centralized error state
     isLoading,
     isFiltering,
     isVoting,
     fetchMatchup,
-    replaceMachine,
     clearError: clearMessages
   };
 }; 

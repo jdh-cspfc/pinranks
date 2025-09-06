@@ -5,16 +5,20 @@
 
 import { useBlockedMachines } from './useBlockedMachines';
 import { useConfirmationMessage } from './useConfirmationMessage';
+import { useMachineReplacement } from './useMachineReplacement';
 import { UI_CONSTANTS } from '../constants/appConstants';
 import { useErrorHandler } from './useErrorHandler';
 
-export const useMatchupActions = (appData) => {
+export const useMatchupActions = (appData, matchup, setMatchup, filter, fetchMatchup) => {
   const { handleError, handleAsyncOperation } = useErrorHandler('useMatchupActions');
   const { addBlockedMachine, blockedMachines } = useBlockedMachines(appData);
   const { message: confirmationMessage, showMessage, clearMessage, cleanup } = useConfirmationMessage();
+  
+  // Use the new machine replacement hook
+  const { replaceMachine } = useMachineReplacement(matchup, setMatchup, filter, appData.user, appData.userPreferences);
 
-  // Create a function that can be enhanced with replaceMachine later
-  const createHandleHaventPlayed = (replaceMachine) => {
+  // Create a function that handles the "haven't played" logic
+  const createHandleHaventPlayed = () => {
     return async (machineIndex, matchup) => {
       try {
         const machine = matchup.machines[machineIndex];
@@ -30,31 +34,41 @@ export const useMatchupActions = (appData) => {
         // Check if machine is already blocked to prevent duplicates
         if (currentBlockedMachines.includes(groupId)) {
           // Machine is already blocked, just replace it without updating preferences
-          const replacementSuccess = await replaceMachine(machineIndex, currentBlockedMachines);
-          if (replacementSuccess) {
+          const result = await replaceMachine(machineIndex, currentBlockedMachines);
+          if (result.success) {
             showMessage(`${machine.name} has been replaced with a new machine`);
             return { success: true, machineName: machine.name };
+          } else if (result.needsRefresh) {
+            // Replacement failed, need full refresh
+            fetchMatchup(false, true);
+            return { success: false, needsRefresh: true };
           } else {
-            throw new Error('Failed to replace machine. Please try again.');
+            throw new Error(result.error || 'Failed to replace machine. Please try again.');
           }
         }
         
         const updatedBlockedMachines = [...currentBlockedMachines, groupId];
         
         // Replace the machine immediately using the optimistic blocked machines list
-        const replacementSuccess = await replaceMachine(machineIndex, updatedBlockedMachines);
+        const result = await replaceMachine(machineIndex, updatedBlockedMachines);
         
-        // If replacement failed, show an error message
-        if (!replacementSuccess) {
-          handleError('Failed to find a replacement machine', { 
+        // Handle the result
+        if (result.success) {
+          // Machine replaced successfully
+          showMessage(`${machine.name} has been added to your "Haven't Played" list`);
+          return { success: true, machineName: machine.name };
+        } else if (result.needsRefresh) {
+          // Replacement failed, need full refresh
+          fetchMatchup(false, true);
+          return { success: false, needsRefresh: true };
+        } else {
+          // Other failure
+          handleError(result.error || 'Failed to find a replacement machine', { 
             action: 'machine_replacement_failed', 
             metadata: { machineIndex, groupId, isMobile }
           });
-          throw new Error('Failed to replace machine. Please try refreshing the page or try again later.');
+          throw new Error(result.error || 'Failed to replace machine. Please try refreshing the page or try again later.');
         }
-        
-        // Show confirmation message immediately
-        showMessage(`${machine.name} has been added to your "Haven't Played" list`);
         
         // Update Firebase in the background (don't await this for better UX)
         addBlockedMachine(groupId).catch(err => {
@@ -71,8 +85,6 @@ export const useMatchupActions = (appData) => {
             // Error is already logged by handleAsyncOperation
           });
         });
-        
-        return { success: true, machineName: machine.name };
         
       } catch (err) {
         handleError(err, { 

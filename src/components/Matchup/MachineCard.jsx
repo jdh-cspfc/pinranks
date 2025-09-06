@@ -13,7 +13,6 @@ export default function MachineCard({
   userPreferences, 
   handleVote, 
   handleHaventPlayed, 
-  replaceMachine, 
   fetchMatchup,
   isMachineBlocked
 }) {

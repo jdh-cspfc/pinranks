@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useMemo } from 'react'
 import AppLayout from './components/AppLayout'
 import { DarkModeProvider } from './DarkModeContext'
 import { useAppData } from './hooks/useAppData'
@@ -10,7 +10,20 @@ import { useErrorHandler } from './hooks/useErrorHandler'
 import LoggingControls from './components/LoggingControls'
 
 export default function App() {
-  const appData = useAppData()
+  const rawAppData = useAppData()
+  
+  // Memoize appData to prevent unnecessary re-renders
+  const appData = useMemo(() => rawAppData, [
+    rawAppData?.user?.uid,
+    rawAppData?.machines?.length,
+    rawAppData?.groups?.length,
+    rawAppData?.userPreferences?.blockedMachines?.length,
+    rawAppData?.userRankings?.length,
+    rawAppData?.isLoading,
+    rawAppData?.isAuthLoading,
+    rawAppData?.isStaticDataLoading,
+    rawAppData?.isUserDataLoading
+  ])
   const { user, isLoading } = appData || {}
   const hasCheckedAuth = !isLoading
   const { activeView, setActiveView, getMainContent } = useAppNavigation()

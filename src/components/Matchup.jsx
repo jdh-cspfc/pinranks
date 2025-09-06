@@ -14,15 +14,26 @@ export default function Matchup({ appData }) {
   const staticDataLoaded = !isStaticDataLoading && machines && groups;
   const [filter, setFilter] = useState(['All']);
   const hasInitialized = useRef(false);
+  const isFetching = useRef(false);
   
   // Get matchup data using the centralized data
-  const { matchup, error, isLoading, isFiltering, isVoting, fetchMatchup, replaceMachine } = useMatchupData(filter, appData);
+  const { matchup, setMatchup, error, isLoading, isFiltering, isVoting, fetchMatchup } = useMatchupData(filter, appData);
+  
+  // Store the latest fetchMatchup function in a ref to avoid dependency issues
+  const fetchMatchupRef = useRef(fetchMatchup);
+  fetchMatchupRef.current = fetchMatchup;
   
   // Get matchup actions for handling "haven't played" functionality
-  const { confirmationMessage, createHandleHaventPlayed } = useMatchupActions(appData);
+  const { confirmationMessage, createHandleHaventPlayed } = useMatchupActions(
+    appData, 
+    matchup, 
+    setMatchup, 
+    filter, 
+    fetchMatchup
+  );
   
-  // Create the handleHaventPlayed function with the replaceMachine dependency
-  const handleHaventPlayed = createHandleHaventPlayed(replaceMachine);
+  // Create the handleHaventPlayed function
+  const handleHaventPlayed = createHandleHaventPlayed();
   
   const { imageStates, bothImagesReady } = useImageLoading(matchup);
   const { clickedCard, handleVote, voteError, voteSuccess, clearVoteMessages } = useVoting(user, matchup, fetchMatchup);
@@ -31,22 +42,25 @@ export default function Matchup({ appData }) {
   useEffect(() => {
     if (user && userPreferencesLoaded && staticDataLoaded && !hasInitialized.current) {
       hasInitialized.current = true;
-      fetchMatchup();
+      fetchMatchupRef.current();
     }
   }, [user, userPreferencesLoaded, staticDataLoaded]);
 
   // Refetch when filter changes - but only if we have existing data
   useEffect(() => {
-    // Only run if we have a matchup and we're not loading, and this is not the initial load
-    if (matchup && !isLoading && userPreferences !== undefined && hasInitialized.current) {
-      fetchMatchup(true); // Pass true to indicate this is a filter change
+    // Only run if we have initialized and we're not currently fetching
+    if (hasInitialized.current && !isFetching.current) {
+      isFetching.current = true;
+      fetchMatchupRef.current(true).finally(() => {
+        isFetching.current = false;
+      }); // Pass true to indicate this is a filter change
     }
-  }, [filter]);
+  }, [filter]); // Only depend on filter, not other state
 
   if (error) {
     return (
       <LoadingError 
-        onRetry={() => fetchMatchup()} 
+        onRetry={() => fetchMatchupRef.current()} 
         message={error}
       />
     );
@@ -107,7 +121,6 @@ export default function Matchup({ appData }) {
             userPreferences={userPreferences}
             handleVote={handleVote}
             handleHaventPlayed={handleHaventPlayed}
-            replaceMachine={replaceMachine}
             fetchMatchup={fetchMatchup}
             isMachineBlocked={userPreferences.isMachineBlocked}
           />

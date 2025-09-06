@@ -57,7 +57,7 @@ export const useVoting = (user, matchup, fetchMatchup) => {
         userMessage: 'Failed to save your vote. Your ranking may not be updated.'
       });
     }
-  }, [user, matchup, handleVoteClick, fetchMatchup, handleError, clearMessages]);
+  }, [user, matchup, handleVoteClick, handleError, clearMessages]);
 
   return {
     clickedCard,
