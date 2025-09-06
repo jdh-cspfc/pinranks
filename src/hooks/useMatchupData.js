@@ -8,7 +8,7 @@ import logger from '../utils/logger';
 
 export const useMatchupData = (filter, appData) => {
   const { machines, groups, user, userPreferences } = appData;
-  const { handleError, withRetry, userError, clearMessages } = useErrorHandler('useMatchupData');
+  const { handleError, userError, clearMessages } = useErrorHandler('useMatchupData');
   const [matchup, setMatchup] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isFiltering, setIsFiltering] = useState(false);
@@ -44,24 +44,18 @@ export const useMatchupData = (filter, appData) => {
       setLoadingStates(isFilterChange, isVoteChange);
       clearMessages(); // Clear any previous error messages
       
-      // Use retry mechanism for data fetching
-      const result = await withRetry(async () => {
-        logger.debug('data', `Filtering ${machines.length} machines with filter: ${filter}`);
-        const filteredMachines = filterMachinesByPreferences(machines, filter, user, userPreferences);
-        logger.debug('data', `${filteredMachines.length} machines after filtering`);
-        
-        const selectedMachines = selectRandomMatchup(filteredMachines, groups);
-        logger.debug('data', `Selected ${selectedMachines.length} machines for matchup`);
-        
-        return {
-          machines: selectedMachines,
-          groups: groups,
-        };
-      }, {
-        maxRetries: 2,
-        delay: 500,
-        context: { action: 'fetchMatchup', filter }
-      });
+      // Filter and select machines (synchronous operation, no retry needed)
+      logger.debug('data', `Filtering ${machines.length} machines with filter: ${filter}`);
+      const filteredMachines = filterMachinesByPreferences(machines, filter, user, userPreferences);
+      logger.debug('data', `${filteredMachines.length} machines after filtering`);
+      
+      const selectedMachines = selectRandomMatchup(filteredMachines, groups);
+      logger.debug('data', `Selected ${selectedMachines.length} machines for matchup`);
+      
+      const result = {
+        machines: selectedMachines,
+        groups: groups,
+      };
 
       logger.info('data', 'Successfully fetched matchup data');
       setMatchup(result);
@@ -75,7 +69,7 @@ export const useMatchupData = (filter, appData) => {
       });
       clearLoadingStates();
     }
-  }, [filter, user, userPreferences, machines, groups, handleError, withRetry, clearMessages]);
+  }, [filter, user, userPreferences, machines, groups, handleError, clearMessages]);
 
 
   return {

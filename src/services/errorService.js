@@ -157,11 +157,11 @@ class ErrorService {
     } = options;
 
     let lastError;
-    logger.debug('error', `Starting retry mechanism for ${context.action || 'operation'} (max ${maxRetries} attempts)`);
+    logger.debug('data', `Starting retry mechanism for ${context.action || 'operation'} (max ${maxRetries} attempts)`);
     
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
-        logger.debug('error', `Attempt ${attempt}/${maxRetries} for ${context.action || 'operation'}`);
+        logger.debug('data', `Attempt ${attempt}/${maxRetries} for ${context.action || 'operation'}`);
         return await operation();
       } catch (error) {
         lastError = error;

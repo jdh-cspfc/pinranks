@@ -3,7 +3,7 @@
  * Replaces multiple individual hooks with a single source of truth
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { StaticDataService, UserDataService, AuthService } from '../services/dataService';
 import { useErrorHandler } from './useErrorHandler';
 import logger from '../utils/logger';
@@ -27,6 +27,10 @@ export const useAppData = () => {
   const [isAuthLoading, setIsAuthLoading] = useState(true);
   const [isStaticDataLoading, setIsStaticDataLoading] = useState(true);
   const [isUserDataLoading, setIsUserDataLoading] = useState(false);
+  
+  // Refs to prevent duplicate calls in StrictMode
+  const staticDataLoaded = useRef(false);
+  const userDataLoading = useRef(false);
 
   // Initialize authentication listener
   useEffect(() => {
@@ -46,6 +50,10 @@ export const useAppData = () => {
 
   // Load static data (machines and groups) once
   useEffect(() => {
+    // Prevent duplicate calls in StrictMode
+    if (staticDataLoaded.current) return;
+    staticDataLoaded.current = true;
+    
     const loadStaticData = async () => {
       try {
         logger.debug('data', 'Loading static data (machines and groups)');
@@ -64,10 +72,15 @@ export const useAppData = () => {
     };
 
     loadStaticData();
-  }, [handleError]);
+  }, []); // Remove handleError dependency to prevent re-runs
 
   // Load user-specific data when user changes
   useEffect(() => {
+    // Prevent duplicate calls for the same user
+    const currentUserId = user?.uid || 'no-user';
+    if (userDataLoading.current === currentUserId) return;
+    userDataLoading.current = currentUserId;
+    
     const loadUserData = async () => {
       if (!user) {
         logger.debug('data', 'No user, clearing user data');
@@ -99,7 +112,7 @@ export const useAppData = () => {
     };
 
     loadUserData();
-  }, [user, handleError]);
+  }, [user]); // Remove handleError dependency to prevent re-runs
 
   // Update overall loading state
   useEffect(() => {

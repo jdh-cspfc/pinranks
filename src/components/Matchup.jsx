@@ -15,6 +15,7 @@ export default function Matchup({ appData }) {
   const [filter, setFilter] = useState(['All']);
   const hasInitialized = useRef(false);
   const isFetching = useRef(false);
+  const previousFilter = useRef(['All']);
   
   // Get matchup data using the centralized data
   const { matchup, setMatchup, error, isLoading, isFiltering, isVoting, fetchMatchup } = useMatchupData(filter, appData);
@@ -46,10 +47,12 @@ export default function Matchup({ appData }) {
     }
   }, [user, userPreferencesLoaded, staticDataLoaded]);
 
-  // Refetch when filter changes - but only if we have existing data
+  // Refetch when filter changes - but only if we have existing data and it's a real filter change
   useEffect(() => {
-    // Only run if we have initialized and we're not currently fetching
-    if (hasInitialized.current && !isFetching.current) {
+    // Only run if we have initialized, we're not currently fetching, and the filter actually changed
+    const filterChanged = JSON.stringify(filter) !== JSON.stringify(previousFilter.current);
+    if (hasInitialized.current && !isFetching.current && filterChanged) {
+      previousFilter.current = [...filter];
       isFetching.current = true;
       fetchMatchupRef.current(true).finally(() => {
         isFetching.current = false;
