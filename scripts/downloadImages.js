@@ -8,7 +8,7 @@
  * 
  * Options:
  *   --limit    Number of images to download (default: 100)
- *   --priority 'all', 'lcd', 'dmd', or 'modern' (lcd+dmd)
+ *   --priority 'all', 'dmd', or 'modern' (Modern/LCD only)
  *   --dry-run  Don't actually download, just show what would be downloaded
  */
 
@@ -26,7 +26,7 @@ const args = process.argv.slice(2);
 const options = {
   limit: 100,
   dryRun: false,
-  priority: 'all' // 'all', 'lcd', 'dmd', 'modern' (lcd+dmd)
+  priority: 'all' // 'all', 'dmd', 'modern' (Modern/LCD only)
 };
 
 args.forEach(arg => {
@@ -158,8 +158,7 @@ const PRIORITY_TO_FILTER_MAP = {
   'alphanumeric': 'Solid State',
   'reels': 'EM',
   'dmd': 'DMD',
-  'lcd': 'Modern',
-  'modern': 'modern',
+  'modern': 'Modern',
   'all': 'all'
 };
 
