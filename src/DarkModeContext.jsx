@@ -6,7 +6,7 @@ export function DarkModeProvider({ children }) {
   const [darkMode, setDarkMode] = useState(() => {
     // Check localStorage for persisted preference
     const stored = localStorage.getItem('darkMode');
-    return stored === null ? false : stored === 'true';
+    return stored === null ? true : stored === 'true';
   });
 
   useEffect(() => {
