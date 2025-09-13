@@ -54,6 +54,22 @@ export const useMatchupActions = (appData, matchup, setMatchup, filter, fetchMat
         
         // Handle the result
         if (result.success) {
+          // Update Firebase in the background (don't await this for better UX)
+          addBlockedMachine(groupId).catch(err => {
+            // If Firebase update fails, log the error but don't disrupt the user experience
+            // The local state is already updated and the machine is replaced
+            // Use handleAsyncOperation with showError: false to log without showing to user
+            handleAsyncOperation(() => Promise.reject(err), {
+              errorContext: { 
+                action: 'addBlockedMachine_background', 
+                metadata: { groupId, machineName: machine.name }
+              },
+              showError: false // Don't show error to user since the action appeared to succeed
+            }).catch(() => {
+              // Error is already logged by handleAsyncOperation
+            });
+          });
+          
           // Machine replaced successfully
           showMessage(`${machine.name} has been added to your "Haven't Played" list`);
           return { success: true, machineName: machine.name };
@@ -69,22 +85,6 @@ export const useMatchupActions = (appData, matchup, setMatchup, filter, fetchMat
           });
           throw new Error(result.error || 'Failed to replace machine. Please try refreshing the page or try again later.');
         }
-        
-        // Update Firebase in the background (don't await this for better UX)
-        addBlockedMachine(groupId).catch(err => {
-          // If Firebase update fails, log the error but don't disrupt the user experience
-          // The local state is already updated and the machine is replaced
-          // Use handleAsyncOperation with showError: false to log without showing to user
-          handleAsyncOperation(() => Promise.reject(err), {
-            errorContext: { 
-              action: 'addBlockedMachine_background', 
-              metadata: { groupId, machineName: machine.name }
-            },
-            showError: false // Don't show error to user since the action appeared to succeed
-          }).catch(() => {
-            // Error is already logged by handleAsyncOperation
-          });
-        });
         
       } catch (err) {
         handleError(err, { 
