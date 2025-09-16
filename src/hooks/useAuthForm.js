@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
-import { auth, db } from '../firebase';
+import { auth, db, googleProvider } from '../firebase';
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   onAuthStateChanged,
   signOut,
-  sendPasswordResetEmail
+  sendPasswordResetEmail,
+  signInWithPopup
 } from 'firebase/auth';
 import {
   doc,
@@ -180,6 +181,60 @@ export const useAuthForm = () => {
     }
   };
 
+  // Handle Google sign-in
+  const handleGoogleSignIn = async () => {
+    try {
+      const result = await signInWithPopup(auth, googleProvider);
+      const user = result.user;
+      
+      // Check if this is a new user
+      const userDoc = await getDoc(doc(db, 'users', user.uid));
+      
+      if (!userDoc.exists()) {
+        // New user - create user document
+        const username = user.displayName?.replace(/\s+/g, '').toLowerCase() || `user${user.uid.slice(0, 8)}`;
+        
+        // Check if username is available, if not append numbers
+        let finalUsername = username;
+        let counter = 1;
+        while (true) {
+          const usernameDoc = await getDoc(doc(db, 'usernames', finalUsername));
+          if (!usernameDoc.exists()) break;
+          finalUsername = `${username}${counter}`;
+          counter++;
+        }
+        
+        // Save user data to Firestore
+        await setDoc(doc(db, 'users', user.uid), {
+          uid: user.uid,
+          email: user.email,
+          username: finalUsername,
+          displayName: user.displayName,
+          photoURL: user.photoURL,
+          createdAt: new Date().toISOString(),
+          provider: 'google'
+        });
+
+        await setDoc(doc(db, 'usernames', finalUsername), {
+          uid: user.uid,
+          email: user.email
+        });
+
+        handleSuccess(`Welcome! Your username is ${finalUsername}`, { action: 'google_signup' });
+      } else {
+        handleSuccess('Successfully signed in with Google!', { action: 'google_signin' });
+      }
+    } catch (err) {
+      // Don't show error if user closed, cancelled, or denied permission
+      if (err.code === 'auth/popup-closed-by-user' || 
+          err.code === 'auth/cancelled-popup-request' || 
+          err.code === 'auth/user-cancelled') {
+        return;
+      }
+      handleFirebaseError(err, { action: 'google_signin' });
+    }
+  };
+
   // Handle logout
   const handleLogout = async () => {
     try {
@@ -217,6 +272,7 @@ export const useAuthForm = () => {
     toggleMode,
     handleSubmit,
     handlePasswordReset,
+    handleGoogleSignIn,
     handleLogout
   };
 };
