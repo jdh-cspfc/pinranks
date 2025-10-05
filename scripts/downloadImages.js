@@ -8,7 +8,7 @@
  * 
  * Options:
  *   --limit    Number of images to download (default: 100)
- *   --priority 'all', 'dmd', or 'modern' (Modern/LCD only)
+ *   --priority 'all', 'em', 'reels', 'alphanumeric', 'dmd', or 'modern'
  *   --dry-run  Don't actually download, just show what would be downloaded
  */
 
@@ -26,7 +26,7 @@ const args = process.argv.slice(2);
 const options = {
   limit: 100,
   dryRun: false,
-  priority: 'all' // 'all', 'dmd', 'modern' (Modern/LCD only)
+  priority: 'all' // 'all', 'em', 'reels', 'alphanumeric', 'dmd', 'modern'
 };
 
 args.forEach(arg => {
@@ -157,6 +157,7 @@ import { getFilterGroup, filterMachinesByPriority } from '../src/utils/filterUti
 const PRIORITY_TO_FILTER_MAP = {
   'alphanumeric': 'Solid State',
   'reels': 'EM',
+  'em': 'EM',
   'dmd': 'DMD',
   'modern': 'Modern',
   'all': 'all'

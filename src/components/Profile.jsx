@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useDarkMode } from '../DarkModeContext';
-import { signOut } from 'firebase/auth';
+import { signOut, sendPasswordResetEmail } from 'firebase/auth';
 import { auth } from '../firebase';
 import { useBlockedMachines } from '../hooks/useBlockedMachines';
 import { useErrorHandler } from '../hooks/useErrorHandler';
@@ -34,6 +34,20 @@ export default function Profile({ appData }) {
       await signOut(auth);
     } catch (err) {
       handleFirebaseError(err, { action: 'logout' });
+    }
+  };
+
+  const handlePasswordReset = async () => {
+    if (!user?.email) {
+      handleError('No email address found for this account.', { action: 'password_reset_validation' });
+      return;
+    }
+
+    try {
+      await sendPasswordResetEmail(auth, user.email);
+      showMessage('Password reset email sent! Check your inbox.');
+    } catch (err) {
+      handleFirebaseError(err, { action: 'password_reset' });
     }
   };
 
@@ -253,12 +267,21 @@ export default function Profile({ appData }) {
 
       <div className="border-t border-gray-200 dark:border-gray-700 w-full mb-6" />
       
-      <button
-        onClick={handleLogout}
-        className="bg-red-500 text-white px-4 py-2 rounded w-full max-w-xs mx-auto block"
-      >
-        Logout
-      </button>
+      <div className="space-y-3">
+        <button
+          onClick={handlePasswordReset}
+          className="bg-blue-500 text-white px-4 py-2 rounded w-full max-w-xs mx-auto block hover:bg-blue-600 transition-colors"
+        >
+          Reset Password
+        </button>
+        
+        <button
+          onClick={handleLogout}
+          className="bg-red-500 text-white px-4 py-2 rounded w-full max-w-xs mx-auto block hover:bg-red-600 transition-colors"
+        >
+          Logout
+        </button>
+      </div>
     </Card>
   );
 }
