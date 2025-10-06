@@ -81,7 +81,9 @@ export default function Profile({ appData }) {
 
   return (
     <Card>
-      <h2 className="text-2xl font-bold mb-4 text-gray-900 dark:text-gray-100">Profile</h2>
+      <h2 className="text-2xl font-bold mb-4 text-gray-900 dark:text-gray-100">
+        {user?.displayName || user?.email?.split('@')[0] || 'User'}'s Profile
+      </h2>
       
       {/* Error/Success Messages */}
       <Message 
