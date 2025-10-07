@@ -19,13 +19,10 @@ export default function HaventPlayedButton({
     <div className="absolute top-0 right-0 w-11 h-11 sm:w-[75px] sm:h-[65px] flex items-center justify-center">
       <button
         onClick={async (e) => {
-          console.log('HaventPlayedButton clicked!', { index, isAlreadyMarked, groupId, machineName: matchup?.machines?.[index]?.name });
           e.stopPropagation();
           if (!isAlreadyMarked) {
-            console.log('Calling handleHaventPlayed...');
             try {
               await handleHaventPlayed(index, matchup);
-              console.log('handleHaventPlayed completed successfully');
             } catch (err) {
               console.error('handleHaventPlayed failed:', err);
               handleError(err, { 
@@ -34,7 +31,6 @@ export default function HaventPlayedButton({
               });
             }
           } else {
-            console.log('Machine already marked, calling fetchMatchup...');
             // If machine is already marked but still visible, force a refresh
             fetchMatchup(false, true);
           }

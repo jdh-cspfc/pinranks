@@ -29,7 +29,7 @@ export default function App() {
   const { activeView, setActiveView, getMainContent } = useAppNavigation()
   const { handleError } = useErrorHandler('App')
   
-  const MainContentComponent = getMainContent(user, hasCheckedAuth, appData)
+  const mainContent = getMainContent(user, hasCheckedAuth, appData)
   
   const handleLogout = async () => {
     try {
@@ -63,7 +63,7 @@ export default function App() {
           onNavigate={setActiveView}
           onLogout={handleLogout}
         >
-          <MainContentComponent />
+          {mainContent}
         </AppLayout>
         <div className="hidden md:block">
           <LoggingControls />

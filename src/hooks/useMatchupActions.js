@@ -21,8 +21,6 @@ export const useMatchupActions = (appData, matchup, setMatchup, filter, fetchMat
   // Create a function that handles the "haven't played" logic
   const createHandleHaventPlayed = () => {
     return async (machineIndex, matchup) => {
-      console.log('createHandleHaventPlayed called with:', { machineIndex, matchup });
-      
       // Define variables outside try block so they're available in catch
       let machine, groupId, isMobile;
       
@@ -30,7 +28,6 @@ export const useMatchupActions = (appData, matchup, setMatchup, filter, fetchMat
         machine = matchup.machines[machineIndex];
         groupId = machine.opdb_id.split('-')[0];
         isMobile = window.innerWidth < UI_CONSTANTS.MOBILE_BREAKPOINT;
-        console.log('Processing machine:', { machine: machine.name, groupId });
         
         // OPTIMISTIC APPROACH: Update local state immediately for better UX
         // Create the updated blocked machines list locally
@@ -60,13 +57,10 @@ export const useMatchupActions = (appData, matchup, setMatchup, filter, fetchMat
         // Handle the result
         if (result.success) {
           // Machine replaced successfully
-          console.log('Machine replacement succeeded, showing success message');
           showMessage(`${machine.name} has been added to your "Haven't Played" list`);
-          console.log('About to start Firebase update in background...');
           
           // Update Firebase in the background (don't await this for better UX)
           logger.info('data', `Starting Firebase update for ${machine.name} (${groupId})`);
-          console.log('About to call addBlockedMachine with groupId:', groupId);
           addBlockedMachine(groupId)
             .then(() => {
               // Firebase update succeeded - no action needed
