@@ -8,6 +8,7 @@ import { useConfirmationMessage } from './useConfirmationMessage';
 import { useMachineReplacement } from './useMachineReplacement';
 import { UI_CONSTANTS } from '../constants/appConstants';
 import { useErrorHandler } from './useErrorHandler';
+import logger from '../utils/logger';
 
 export const useMatchupActions = (appData, matchup, setMatchup, filter, fetchMatchup) => {
   const { handleError, handleAsyncOperation } = useErrorHandler('useMatchupActions');
@@ -20,12 +21,16 @@ export const useMatchupActions = (appData, matchup, setMatchup, filter, fetchMat
   // Create a function that handles the "haven't played" logic
   const createHandleHaventPlayed = () => {
     return async (machineIndex, matchup) => {
+      console.log('createHandleHaventPlayed called with:', { machineIndex, matchup });
+      
+      // Define variables outside try block so they're available in catch
+      let machine, groupId, isMobile;
+      
       try {
-        const machine = matchup.machines[machineIndex];
-        const groupId = machine.opdb_id.split('-')[0];
-        
-        // Check if mobile device
-        const isMobile = window.innerWidth < UI_CONSTANTS.MOBILE_BREAKPOINT;
+        machine = matchup.machines[machineIndex];
+        groupId = machine.opdb_id.split('-')[0];
+        isMobile = window.innerWidth < UI_CONSTANTS.MOBILE_BREAKPOINT;
+        console.log('Processing machine:', { machine: machine.name, groupId });
         
         // OPTIMISTIC APPROACH: Update local state immediately for better UX
         // Create the updated blocked machines list locally
@@ -55,7 +60,35 @@ export const useMatchupActions = (appData, matchup, setMatchup, filter, fetchMat
         // Handle the result
         if (result.success) {
           // Machine replaced successfully
+          console.log('Machine replacement succeeded, showing success message');
           showMessage(`${machine.name} has been added to your "Haven't Played" list`);
+          console.log('About to start Firebase update in background...');
+          
+          // Update Firebase in the background (don't await this for better UX)
+          logger.info('data', `Starting Firebase update for ${machine.name} (${groupId})`);
+          console.log('About to call addBlockedMachine with groupId:', groupId);
+          addBlockedMachine(groupId)
+            .then(() => {
+              // Firebase update succeeded - no action needed
+              logger.info('data', `Successfully saved ${machine.name} to blocked list in Firebase`);
+            })
+            .catch(err => {
+              // Firebase update failed - log the error and show a subtle notification
+              logger.error('data', `Failed to save ${machine.name} to blocked list: ${err.message}`);
+              console.error('Firebase update failed:', err); // Additional console logging
+              
+              // Show a warning notification to the user
+              setTimeout(() => {
+                showMessage(`Warning: ${machine.name} may not be saved to your "Haven't Played" list. Please try again.`);
+              }, 2000); // Show after 2 seconds to not interfere with success message
+              
+              // Log the error for debugging
+              handleError(err, { 
+                action: 'addBlockedMachine_background_failed', 
+                metadata: { groupId, machineName: machine.name }
+              });
+            });
+          
           return { success: true, machineName: machine.name };
         } else if (result.needsRefresh) {
           // Replacement failed, need full refresh
@@ -69,22 +102,6 @@ export const useMatchupActions = (appData, matchup, setMatchup, filter, fetchMat
           });
           throw new Error(result.error || 'Failed to replace machine. Please try refreshing the page or try again later.');
         }
-        
-        // Update Firebase in the background (don't await this for better UX)
-        addBlockedMachine(groupId).catch(err => {
-          // If Firebase update fails, log the error but don't disrupt the user experience
-          // The local state is already updated and the machine is replaced
-          // Use handleAsyncOperation with showError: false to log without showing to user
-          handleAsyncOperation(() => Promise.reject(err), {
-            errorContext: { 
-              action: 'addBlockedMachine_background', 
-              metadata: { groupId, machineName: machine.name }
-            },
-            showError: false // Don't show error to user since the action appeared to succeed
-          }).catch(() => {
-            // Error is already logged by handleAsyncOperation
-          });
-        });
         
       } catch (err) {
         handleError(err, { 

@@ -131,9 +131,20 @@ export class UserDataService {
   }
 
   static async addBlockedMachine(userId, groupId, currentBlockedMachines) {
+    console.log('UserDataService.addBlockedMachine called:', { userId, groupId, currentBlockedMachines });
     logger.info('firebase', `Adding ${groupId} to blocked machines for user ${userId}`);
+    
+    // Check if the machine is already blocked to prevent duplicates
+    if (currentBlockedMachines.includes(groupId)) {
+      logger.info('firebase', `Machine ${groupId} is already blocked for user ${userId}`);
+      console.log('Machine already blocked, returning existing array');
+      return currentBlockedMachines; // Return the existing array unchanged
+    }
+    
     const newBlockedMachines = [...currentBlockedMachines, groupId];
+    console.log('About to update Firebase with new blocked machines:', newBlockedMachines);
     await this.updateUserPreferences(userId, { blockedMachines: newBlockedMachines });
+    console.log('Firebase update completed successfully');
     logger.info('firebase', `Successfully added ${groupId} to blocked machines for user ${userId}`);
     return newBlockedMachines;
   }

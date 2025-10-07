@@ -121,6 +121,7 @@ export const useAppData = () => {
 
   // Helper functions for user preferences
   const addBlockedMachine = useCallback(async (groupId) => {
+    console.log('addBlockedMachine called with groupId:', groupId, 'user:', user?.uid);
     if (!user) {
       logger.error('auth', 'addBlockedMachine: No user logged in');
       throw new Error('You must be logged in to use this feature.');
@@ -128,16 +129,19 @@ export const useAppData = () => {
 
     try {
       logger.info('data', `Adding ${groupId} to blocked machines for user ${user.uid}`);
+      console.log('Current blocked machines:', userPreferences.blockedMachines);
       const newBlockedMachines = await UserDataService.addBlockedMachine(
         user.uid, 
         groupId, 
         userPreferences.blockedMachines
       );
+      console.log('New blocked machines after Firebase update:', newBlockedMachines);
       setUserPreferences(prev => ({ ...prev, blockedMachines: newBlockedMachines }));
       logger.info('data', `Successfully added ${groupId} to blocked machines`);
       return newBlockedMachines; // Return the updated blocked machines list
     } catch (error) {
       logger.error('data', `Error adding ${groupId} to blocked machines: ${error.message}`);
+      console.error('addBlockedMachine error:', error);
       handleError(error, { action: 'addBlockedMachine', metadata: { groupId, userId: user.uid } });
       throw error;
     }
