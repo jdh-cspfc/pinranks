@@ -7,7 +7,8 @@
  *   node scripts/downloadImages.js [--limit=100] [--priority=modern]
  * 
  * Options:
- *   --limit    Number of images to download (default: 100)
+ *   --limit    Number of machines with actual downloads (default: 100)
+ *              Note: Machines where images already exist are skipped and don't count toward limit
  *   --priority 'all', 'em', 'reels', 'alphanumeric', 'dmd', or 'modern'
  *   --dry-run  Don't actually download, just show what would be downloaded
  */
@@ -66,9 +67,13 @@ function loadProgress() {
   return { processed: 0, lastMachine: null };
 }
 
-function saveProgress(processed, lastMachine) {
+function saveProgress(processed, lastMachine, downloads = null) {
   try {
-    fs.writeFileSync(progressFile, JSON.stringify({ processed, lastMachine }, null, 2));
+    const progressData = { processed, lastMachine };
+    if (downloads !== null) {
+      progressData.downloads = downloads;
+    }
+    fs.writeFileSync(progressFile, JSON.stringify(progressData, null, 2));
   } catch (error) {
     console.log('Could not save progress file');
   }
@@ -166,7 +171,7 @@ const PRIORITY_TO_FILTER_MAP = {
 async function main() {
   console.log(`🚀 Starting image download process...`);
   console.log(`   Total machines: ${machines.length}`);
-  console.log(`   Limit: ${options.limit}`);
+  console.log(`   Limit: ${options.limit} machines with actual downloads`);
   console.log(`   Priority: ${options.priority}`);
   console.log(`   Dry run: ${options.dryRun}`);
   console.log('');
@@ -174,6 +179,7 @@ async function main() {
   // Load progress
   const progress = loadProgress();
   console.log(`📊 Progress: ${progress.processed} machines processed so far`);
+  console.log(`📊 Downloads: ${progress.downloads || 0} machines with actual downloads`);
   if (progress.lastMachine) {
     console.log(`   Last machine: ${progress.lastMachine}`);
   }
@@ -189,38 +195,51 @@ async function main() {
   console.log('');
   
   // Start from where we left off
-  const startIndex = progress.processed;
-  const machinesToProcess = filteredMachines.slice(startIndex, startIndex + options.limit);
+  const startIndex = progress.processed || 0;
+  const downloadsSoFar = progress.downloads || 0;
   
   console.log(`📊 Processing:`);
   console.log(`   Total ${options.priority} machines: ${filteredMachines.length}`);
   console.log(`   Starting from index: ${startIndex}`);
-  console.log(`   Processing next ${options.limit} machines`);
-  console.log(`   (Deduplication will skip any that already exist)`);
+  console.log(`   Target: ${options.limit} machines with actual downloads`);
+  console.log(`   Already downloaded: ${downloadsSoFar}/${options.limit}`);
   console.log('');
   
-  if (machinesToProcess.length === 0) {
+  if (startIndex >= filteredMachines.length) {
     console.log(`✅ All ${options.priority} machines have been processed!`);
     return;
   }
   
   const results = {
-    total: machinesToProcess.length,
+    total: 0,
     successful: 0,
     failed: 0,
     downloaded: 0,
     skipped: 0,
-    errors: []
+    errors: [],
+    machinesWithDownloads: 0
   };
   
-  for (let i = 0; i < machinesToProcess.length; i++) {
-    const machine = machinesToProcess[i];
+  let currentIndex = startIndex;
+  let downloadsCount = downloadsSoFar;
+  
+  // Process machines until we reach the download limit or run out of machines
+  while (downloadsCount < options.limit && currentIndex < filteredMachines.length) {
+    const machine = filteredMachines[currentIndex];
     const result = await downloadMachineImages(machine);
+    
+    results.total++;
     
     if (result.success) {
       results.successful++;
       results.downloaded += result.downloaded || 0;
       results.skipped += result.skipped || 0;
+      
+      // Only count as a "download" if we actually downloaded new images
+      if ((result.downloaded || 0) > 0) {
+        downloadsCount++;
+        results.machinesWithDownloads++;
+      }
     } else {
       results.failed++;
       results.errors.push({
@@ -230,11 +249,13 @@ async function main() {
       });
     }
     
-    // Save progress after each machine
-    saveProgress(startIndex + i + 1, machine.opdb_id);
+    // Save progress after each machine (including both processed count and download count)
+    saveProgress(currentIndex + 1, machine.opdb_id, downloadsCount);
+    
+    currentIndex++;
     
     // Add a small delay to be respectful to the servers
-    if (!options.dryRun && i < machinesToProcess.length - 1) {
+    if (!options.dryRun && currentIndex < filteredMachines.length) {
       await new Promise(resolve => setTimeout(resolve, 1000));
     }
   }
@@ -242,11 +263,13 @@ async function main() {
   console.log('');
   console.log(`📊 Download Summary:`);
   console.log(`   Total processed: ${results.total}`);
+  console.log(`   Machines with actual downloads: ${results.machinesWithDownloads}`);
   console.log(`   Successful: ${results.successful}`);
   console.log(`   Failed: ${results.failed}`);
   console.log(`   New images downloaded: ${results.downloaded}`);
   console.log(`   Images skipped (already existed): ${results.skipped}`);
-  console.log(`   Progress saved: ${startIndex + results.total}/${filteredMachines.length} ${options.priority} machines`);
+  console.log(`   Progress saved: ${currentIndex}/${filteredMachines.length} ${options.priority} machines processed`);
+  console.log(`   Download target: ${downloadsCount}/${options.limit} machines with downloads`);
   
   if (results.errors.length > 0) {
     console.log('');
@@ -257,7 +280,13 @@ async function main() {
   }
   
   console.log('');
-  console.log(`✨ Process completed!`);
+  if (downloadsCount >= options.limit) {
+    console.log(`✅ Reached download limit of ${options.limit} machines with actual downloads!`);
+  } else if (currentIndex >= filteredMachines.length) {
+    console.log(`✅ All ${options.priority} machines have been processed!`);
+  } else {
+    console.log(`✨ Process completed!`);
+  }
   console.log(`💡 Next time, run the same command to continue from where you left off.`);
 }
 

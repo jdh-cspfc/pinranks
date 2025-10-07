@@ -98,9 +98,15 @@ export const useAppData = () => {
           UserDataService.getUserRankings(user.uid)
         ]);
         
-        logger.info('data', `Loaded user data for ${user.uid} - ${preferences.blockedMachines.length} blocked machines, ${rankings.length} rankings`);
+        // Filter rankings to exclude machines from blocked machine groups
+        const filteredRankings = rankings.filter(ranking => {
+          const groupId = ranking.machineId.split('-')[0];
+          return !preferences.blockedMachines.some(blockedId => groupId.startsWith(blockedId));
+        });
+        
+        logger.info('data', `Loaded user data for ${user.uid} - ${preferences.blockedMachines.length} blocked machines, ${rankings.length} rankings (${filteredRankings.length} after filtering)`);
         setUserPreferences(preferences);
-        setUserRankings(rankings);
+        setUserRankings(filteredRankings);
       } catch (error) {
         logger.error('data', `Error loading user data for ${user.uid}: ${error.message}`);
         handleError(error, { action: 'loadUserData', metadata: { userId: user.uid } });
@@ -134,6 +140,17 @@ export const useAppData = () => {
         userPreferences.blockedMachines
       );
       setUserPreferences(prev => ({ ...prev, blockedMachines: newBlockedMachines }));
+      
+      // Also filter out the blocked machine from current rankings
+      if (userRankings) {
+        const filteredRankings = userRankings.filter(ranking => {
+          const rankingGroupId = ranking.machineId.split('-')[0];
+          return !rankingGroupId.startsWith(groupId);
+        });
+        setUserRankings(filteredRankings);
+        logger.info('data', `Filtered blocked machine ${groupId} from rankings`);
+      }
+      
       logger.info('data', `Successfully added ${groupId} to blocked machines`);
       return newBlockedMachines; // Return the updated blocked machines list
     } catch (error) {
@@ -142,7 +159,7 @@ export const useAppData = () => {
       handleError(error, { action: 'addBlockedMachine', metadata: { groupId, userId: user.uid } });
       throw error;
     }
-  }, [user, userPreferences.blockedMachines, handleError]);
+  }, [user, userPreferences.blockedMachines, userRankings, handleError]);
 
   const isMachineBlocked = useCallback((groupId) => {
     return userPreferences.blockedMachines.some(blockedId => groupId.startsWith(blockedId));
@@ -166,6 +183,19 @@ export const useAppData = () => {
         blockedMachines: newBlockedMachines 
       });
       
+      // Refresh rankings to restore any rankings for the unblocked machine
+      logger.debug('data', `Refreshing rankings after unblocking ${groupId}`);
+      const rankings = await UserDataService.getUserRankings(user.uid);
+      
+      // Filter rankings with the updated blocked machines list
+      const filteredRankings = rankings.filter(ranking => {
+        const rankingGroupId = ranking.machineId.split('-')[0];
+        return !newBlockedMachines.some(blockedId => rankingGroupId.startsWith(blockedId));
+      });
+      
+      setUserRankings(filteredRankings);
+      logger.info('data', `Refreshed rankings after unblocking ${groupId}`);
+      
       return true;
     } catch (error) {
       // Rollback: restore original state if Firebase update failed
@@ -187,8 +217,14 @@ export const useAppData = () => {
         UserDataService.getUserRankings(user.uid)
       ]);
       
+      // Filter rankings to exclude machines from blocked machine groups
+      const filteredRankings = rankings.filter(ranking => {
+        const groupId = ranking.machineId.split('-')[0];
+        return !preferences.blockedMachines.some(blockedId => groupId.startsWith(blockedId));
+      });
+      
       setUserPreferences(preferences);
-      setUserRankings(rankings);
+      setUserRankings(filteredRankings);
     } catch (error) {
       handleError(error, { action: 'refreshUserData', metadata: { userId: user.uid } });
     } finally {
