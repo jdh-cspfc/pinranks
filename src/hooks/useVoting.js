@@ -43,6 +43,7 @@ export const useVoting = (user, matchup, fetchMatchup) => {
       await processVote(user.uid, winnerId, loserId, winnerGroup, loserGroup);
       // Success is handled optimistically by the UI (showing next matchup)
       // No need to show success message for normal voting flow
+      // Rankings will be refreshed when user navigates to Rankings page
     } catch (err) {
       // Log the error and show user-friendly message
       handleError(err, { 

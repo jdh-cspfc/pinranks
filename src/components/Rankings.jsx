@@ -18,7 +18,8 @@ export default function Rankings({ appData }) {
     machines, 
     groups, 
     isLoading: loading, 
-    isUserDataLoading: rankingsLoading 
+    isUserDataLoading: rankingsLoading,
+    refreshUserData
   } = appData;
   const { 
     displayedCount, 
@@ -28,6 +29,16 @@ export default function Rankings({ appData }) {
     loadingRef, 
     resetDisplayCount 
   } = useInfiniteScroll(rankings?.length);
+
+  // Refresh rankings data when component mounts to get latest vote results
+  useEffect(() => {
+    if (user && refreshUserData) {
+      refreshUserData().catch(err => {
+        // Silently fail - user will still see cached rankings
+        console.warn('Failed to refresh rankings on mount:', err);
+      });
+    }
+  }, [user, refreshUserData]);
 
   // Reset displayed count when filter changes
   useEffect(() => {
