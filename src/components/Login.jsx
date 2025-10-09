@@ -41,7 +41,7 @@ export default function Login() {
         {/* Header Section */}
         <div className="text-center">
           <p className="text-sm text-gray-600 dark:text-gray-400">Log in to</p>
-          <div className="flex items-center justify-center gap-2 mt-1">
+          <div className="flex items-center justify-center gap-2 mt-1 -ml-3">
             <img src="/favicon.svg" alt="pinranks logo" className="h-8 w-8" />
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white tracking-tight">pinranks</h1>
           </div>
