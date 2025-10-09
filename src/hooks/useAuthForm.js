@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { auth, db, googleProvider } from '../firebase';
+import { auth, db, googleProvider, facebookProvider } from '../firebase';
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
@@ -235,6 +235,62 @@ export const useAuthForm = () => {
     }
   };
 
+  // Handle Facebook sign-in
+  const handleFacebookSignIn = async () => {
+    try {
+      const result = await signInWithPopup(auth, facebookProvider);
+      const user = result.user;
+      
+      // Check if this is a new user
+      const userDoc = await getDoc(doc(db, 'users', user.uid));
+      
+      if (!userDoc.exists()) {
+        // New user - create user document
+        const username = user.displayName?.replace(/\s+/g, '').toLowerCase() || `user${user.uid.slice(0, 8)}`;
+        
+        // Check if username is available, if not append numbers
+        let finalUsername = username;
+        let counter = 1;
+        while (true) {
+          const usernameDoc = await getDoc(doc(db, 'usernames', finalUsername));
+          if (!usernameDoc.exists()) break;
+          finalUsername = `${username}${counter}`;
+          counter++;
+        }
+        
+        // Create user document
+        await setDoc(doc(db, 'users', user.uid), {
+          username: finalUsername,
+          email: user.email,
+          displayName: user.displayName,
+          photoURL: user.photoURL,
+          createdAt: new Date(),
+          preferences: {
+            blockedMachines: [],
+            darkMode: false
+          }
+        });
+        
+        // Reserve username
+        await setDoc(doc(db, 'usernames', finalUsername), {
+          uid: user.uid
+        });
+
+        handleSuccess(`Welcome! Your username is ${finalUsername}`, { action: 'facebook_signup' });
+      } else {
+        handleSuccess('Successfully signed in with Facebook!', { action: 'facebook_signin' });
+      }
+    } catch (err) {
+      // Don't show error if user closed, cancelled, or denied permission
+      if (err.code === 'auth/popup-closed-by-user' || 
+          err.code === 'auth/cancelled-popup-request' || 
+          err.code === 'auth/user-cancelled') {
+        return;
+      }
+      handleFirebaseError(err, { action: 'facebook_signin' });
+    }
+  };
+
   // Handle logout
   const handleLogout = async () => {
     try {
@@ -273,6 +329,7 @@ export const useAuthForm = () => {
     handleSubmit,
     handlePasswordReset,
     handleGoogleSignIn,
+    handleFacebookSignIn,
     handleLogout
   };
 };

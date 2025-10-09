@@ -1,5 +1,5 @@
 import { initializeApp } from 'firebase/app'
-import { getAuth, setPersistence, browserLocalPersistence, GoogleAuthProvider } from 'firebase/auth'
+import { getAuth, setPersistence, browserLocalPersistence, GoogleAuthProvider, FacebookAuthProvider } from 'firebase/auth'
 import { getFirestore } from 'firebase/firestore'
 import errorService from './services/errorService'
 
@@ -19,6 +19,9 @@ export const auth = getAuth(app)
 
 // Initialize Google Auth Provider
 export const googleProvider = new GoogleAuthProvider()
+
+// Initialize Facebook Auth Provider
+export const facebookProvider = new FacebookAuthProvider()
 
 // Set persistence to LOCAL for faster auth checks
 setPersistence(auth, browserLocalPersistence)
