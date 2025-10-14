@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback } from 'react';
 
-export const useConfirmationMessage = (timeoutMs = 3000) => {
+export const useConfirmationMessage = (timeoutMs = 5000) => {
   const [message, setMessage] = useState(null);
   const timeoutRef = useRef(null);
 
@@ -10,7 +10,13 @@ export const useConfirmationMessage = (timeoutMs = 3000) => {
       clearTimeout(timeoutRef.current);
     }
     
-    setMessage(newMessage);
+    // Support both string and object formats
+    // Object format: { text: string, onUndo?: function }
+    const messageObj = typeof newMessage === 'string' 
+      ? { text: newMessage } 
+      : newMessage;
+    
+    setMessage(messageObj);
     
     // Set timeout to clear message
     timeoutRef.current = setTimeout(() => {

@@ -3,6 +3,7 @@
  * Handles the complex business logic for machine replacement and user preferences
  */
 
+import { useRef } from 'react';
 import { useBlockedMachines } from './useBlockedMachines';
 import { useConfirmationMessage } from './useConfirmationMessage';
 import { useMachineReplacement } from './useMachineReplacement';
@@ -12,11 +13,14 @@ import logger from '../utils/logger';
 
 export const useMatchupActions = (appData, matchup, setMatchup, filter, fetchMatchup) => {
   const { handleError, handleAsyncOperation } = useErrorHandler('useMatchupActions');
-  const { addBlockedMachine, blockedMachines } = useBlockedMachines(appData);
+  const { addBlockedMachine, removeBlockedMachine, blockedMachines } = useBlockedMachines(appData);
   const { message: confirmationMessage, showMessage, clearMessage, cleanup } = useConfirmationMessage();
   
   // Use the new machine replacement hook
   const { replaceMachine } = useMachineReplacement(matchup, setMatchup, filter, appData.user, appData.userPreferences);
+  
+  // Store pending undo actions
+  const pendingUndoRef = useRef(null);
 
   // Create a function that handles the "haven't played" logic
   const createHandleHaventPlayed = () => {
@@ -38,7 +42,7 @@ export const useMatchupActions = (appData, matchup, setMatchup, filter, fetchMat
           // Machine is already blocked, just replace it without updating preferences
           const result = await replaceMachine(machineIndex, currentBlockedMachines);
           if (result.success) {
-            showMessage(`${machine.name} has been replaced with a new machine`);
+            showMessage({ text: `${machine.name} has been replaced with a new machine` });
             return { success: true, machineName: machine.name };
           } else if (result.needsRefresh) {
             // Replacement failed, need full refresh
@@ -51,39 +55,90 @@ export const useMatchupActions = (appData, matchup, setMatchup, filter, fetchMat
         
         const updatedBlockedMachines = [...currentBlockedMachines, groupId];
         
+        // Store the original machine and matchup state for undo
+        const originalMachine = { ...machine };
+        const originalMatchup = { ...matchup, machines: [...matchup.machines] };
+        
         // Replace the machine immediately using the optimistic blocked machines list
         const result = await replaceMachine(machineIndex, updatedBlockedMachines);
         
         // Handle the result
         if (result.success) {
           // Machine replaced successfully
-          showMessage(`${machine.name} has been added to your "Haven't Played" list`);
+          const newMachine = result.newMachine;
           
-          // Update Firebase in the background (don't await this for better UX)
-          logger.info('data', `Starting Firebase update for ${machine.name} (${groupId})`);
-          addBlockedMachine(groupId)
-            .then(() => {
-              // Firebase update succeeded - no action needed
-              logger.info('data', `Successfully saved ${machine.name} to blocked list in Firebase`);
-            })
-            .catch(err => {
-              // Firebase update failed - log the error and show a subtle notification
-              logger.error('data', `Failed to save ${machine.name} to blocked list: ${err.message}`);
-              console.error('Firebase update failed:', err); // Additional console logging
+          // Cancel any existing pending undo
+          if (pendingUndoRef.current) {
+            clearTimeout(pendingUndoRef.current.firebaseTimeout);
+            pendingUndoRef.current = null;
+          }
+          
+          // Create undo function
+          const handleUndo = async () => {
+            try {
+              logger.info('undo', `Undoing block of ${originalMachine.name} (${groupId})`);
               
-              // Show a warning notification to the user
-              setTimeout(() => {
-                showMessage(`Warning: ${machine.name} may not be saved to your "Haven't Played" list. Please try again.`);
-              }, 2000); // Show after 2 seconds to not interfere with success message
+              // Cancel the pending Firebase write
+              if (pendingUndoRef.current) {
+                clearTimeout(pendingUndoRef.current.firebaseTimeout);
+                pendingUndoRef.current = null;
+              }
               
-              // Log the error for debugging
-              handleError(err, { 
-                action: 'addBlockedMachine_background_failed', 
-                metadata: { groupId, machineName: machine.name }
+              // Restore the original matchup state
+              setMatchup(originalMatchup);
+              
+              // Clear the confirmation message
+              clearMessage();
+              
+              // Show a brief confirmation
+              showMessage({ text: `Restored ${originalMachine.name}` });
+              
+              logger.info('undo', `Successfully restored ${originalMachine.name}`);
+            } catch (err) {
+              logger.error('undo', `Failed to undo block of ${originalMachine.name}: ${err.message}`);
+              console.error('Undo failed:', err);
+              showMessage({ text: `Failed to undo. Please try again.` });
+            }
+          };
+          
+          // Show message with undo button
+          showMessage({
+            text: `${originalMachine.name} added to "Haven't Played" list`,
+            onUndo: handleUndo
+          });
+          
+          // Schedule Firebase update after undo window expires
+          const firebaseTimeout = setTimeout(() => {
+            logger.info('data', `Undo window expired, saving ${originalMachine.name} (${groupId}) to Firebase`);
+            addBlockedMachine(groupId)
+              .then(() => {
+                logger.info('data', `Successfully saved ${originalMachine.name} to blocked list in Firebase`);
+                pendingUndoRef.current = null;
+              })
+              .catch(err => {
+                logger.error('data', `Failed to save ${originalMachine.name} to blocked list: ${err.message}`);
+                console.error('Firebase update failed:', err);
+                
+                // Show a warning notification to the user
+                showMessage({ text: `Warning: ${originalMachine.name} may not be saved. Please try again.` });
+                
+                handleError(err, { 
+                  action: 'addBlockedMachine_background_failed', 
+                  metadata: { groupId, machineName: originalMachine.name }
+                });
+                
+                pendingUndoRef.current = null;
               });
-            });
+          }, 5000); // Wait 5 seconds before saving to Firebase
           
-          return { success: true, machineName: machine.name };
+          // Store the pending action for potential cancellation
+          pendingUndoRef.current = {
+            groupId,
+            machineName: originalMachine.name,
+            firebaseTimeout
+          };
+          
+          return { success: true, machineName: originalMachine.name };
         } else if (result.needsRefresh) {
           // Replacement failed, need full refresh
           fetchMatchup(false, true);
