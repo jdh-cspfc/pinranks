@@ -16,7 +16,7 @@ export default function HaventPlayedButton({
   const isMobile = window.innerWidth < 640;
 
   return (
-    <div className="absolute top-0 right-0 w-11 h-11 sm:w-[75px] sm:h-[65px] flex items-center justify-center">
+    <div className="absolute top-0 right-0 w-[50px] h-[50px] sm:w-[75px] sm:h-[65px] flex items-center justify-center">
       <button
         onClick={async (e) => {
           e.stopPropagation();
@@ -48,8 +48,8 @@ export default function HaventPlayedButton({
           WebkitTapHighlightColor: 'transparent'
         }}
       >
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M20 12H4" />
+        <svg className="w-4 h-4 sm:w-7 sm:h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M6 6L18 18 M18 6L6 18" />
         </svg>
       </button>
     </div>
