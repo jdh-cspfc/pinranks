@@ -16,7 +16,7 @@ export default function LoginForm({ formData, updateFormData, handlePasswordRese
         <input
           type="text"
           className="w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-transparent dark:bg-gray-800 dark:border-gray-600 dark:text-white dark:placeholder-gray-400"
-          placeholder="Your Email"
+          placeholder="Email or Username"
           value={formData.loginId}
           onChange={(e) => updateFormData('loginId', e.target.value)}
         />
@@ -32,7 +32,7 @@ export default function LoginForm({ formData, updateFormData, handlePasswordRese
         <input
           type="password"
           className="w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-transparent dark:bg-gray-800 dark:border-gray-600 dark:text-white dark:placeholder-gray-400"
-          placeholder="Your Password"
+          placeholder="Password"
           value={formData.password}
           onChange={(e) => updateFormData('password', e.target.value)}
         />
