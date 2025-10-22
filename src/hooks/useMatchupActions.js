@@ -103,7 +103,7 @@ export const useMatchupActions = (appData, matchup, setMatchup, filter, fetchMat
           
           // Show message with undo button
           showMessage({
-            text: `${originalMachine.name} added to "Haven't Played" list`,
+            text: `${originalMachine.name} added to Haven't Played list`,
             onUndo: handleUndo
           });
           

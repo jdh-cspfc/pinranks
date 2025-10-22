@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useDarkMode } from '../DarkModeContext';
 import { signOut, sendPasswordResetEmail } from 'firebase/auth';
 import { auth } from '../firebase';
@@ -7,6 +7,7 @@ import { useErrorHandler } from '../hooks/useErrorHandler';
 import { useConfirmationMessage } from '../hooks/useConfirmationMessage';
 import Card from './Card';
 import { Message } from './ErrorDisplay';
+import logger from '../utils/logger';
 
 export default function Profile({ appData }) {
   const { darkMode, setDarkMode } = useDarkMode();
@@ -22,12 +23,16 @@ export default function Profile({ appData }) {
   } = appData;
   const { 
     blockedMachines, 
+    addBlockedMachine,
     removeBlockedMachine, 
     isLoading: isUserDataLoading 
   } = useBlockedMachines(appData);
   
   const [showAllMachines, setShowAllMachines] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  
+  // Store pending undo actions
+  const pendingUndoRef = useRef(null);
 
   const handleLogout = async () => {
     try {
@@ -57,11 +62,61 @@ export default function Profile({ appData }) {
       const group = groups?.find(g => g.opdb_id === groupId);
       const machineName = group?.name || `Machine ${groupId}`;
       
-      // Use the optimistic removeBlockedMachine function from useAppData
+      // Cancel any existing pending undo
+      if (pendingUndoRef.current) {
+        clearTimeout(pendingUndoRef.current.firebaseTimeout);
+        pendingUndoRef.current = null;
+      }
+      
+      // Optimistically remove the machine from the UI immediately
       await removeBlockedMachine(groupId);
       
-      // Show success message
-      showMessage(`${machineName} has been removed from your "Haven't Played" list`);
+      // Create undo function
+      const handleUndo = async () => {
+        try {
+          logger.info('undo', `Undoing removal of ${machineName} (${groupId})`);
+          
+          // Cancel the pending Firebase write
+          if (pendingUndoRef.current) {
+            clearTimeout(pendingUndoRef.current.firebaseTimeout);
+            pendingUndoRef.current = null;
+          }
+          
+          // Re-add the machine to the blocked list
+          await addBlockedMachine(groupId);
+          
+          // Clear the confirmation message
+          showMessage({ text: `Restored ${machineName} to Haven't Played list` });
+          
+          logger.info('undo', `Successfully restored ${machineName}`);
+        } catch (err) {
+          logger.error('undo', `Failed to undo removal of ${machineName}: ${err.message}`);
+          console.error('Undo failed:', err);
+          showMessage({ text: `Failed to undo. Please try again.` });
+        }
+      };
+      
+      // Show message with undo button
+      showMessage({
+        text: `${machineName} removed from Haven't Played list`,
+        onUndo: handleUndo
+      });
+      
+      // Note: removeBlockedMachine already updates Firebase immediately
+      // But we'll still track this for potential future optimistic behavior
+      pendingUndoRef.current = {
+        groupId,
+        machineName,
+        firebaseTimeout: null // No delayed write needed since removeBlockedMachine handles it
+      };
+      
+      // Clear the pending action after the undo window
+      setTimeout(() => {
+        if (pendingUndoRef.current?.groupId === groupId) {
+          pendingUndoRef.current = null;
+        }
+      }, 5000);
+      
     } catch (err) {
       handleError(err, { 
         action: 'removeFromBlockedList', 
@@ -93,12 +148,22 @@ export default function Profile({ appData }) {
         className="mb-4"
       />
       
-      {/* Toast Notification */}
+      {/* Toast Notification with Undo */}
       {confirmationMessage && (
-        <div className="fixed bottom-2 left-1/2 transform -translate-x-1/2 sm:left-auto sm:transform-none sm:right-4 z-50 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 px-3 py-2 rounded-lg shadow-lg max-w-xs mb-4">
-          <div className="flex items-center gap-2">
-            <div className="w-1.5 h-1.5 bg-green-500 rounded-full flex-shrink-0"></div>
-            <span className="text-xs">{confirmationMessage.text || confirmationMessage}</span>
+        <div className="fixed bottom-4 left-4 right-4 sm:left-auto sm:right-4 sm:max-w-md z-50 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 px-4 py-3 rounded-lg shadow-lg">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-start gap-2.5 flex-1 min-w-0">
+              <div className="w-2 h-2 bg-green-500 rounded-full flex-shrink-0 mt-1"></div>
+              <span className="text-sm break-words">{confirmationMessage.text || confirmationMessage}</span>
+            </div>
+            {confirmationMessage.onUndo && (
+              <button 
+                onClick={confirmationMessage.onUndo}
+                className="text-sm font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 whitespace-nowrap flex-shrink-0 transition-colors"
+              >
+                Undo
+              </button>
+            )}
           </div>
         </div>
       )}
