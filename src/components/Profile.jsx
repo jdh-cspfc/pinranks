@@ -217,7 +217,7 @@ export default function Profile({ appData }) {
           </div>
         ) : blockedMachines?.length === 0 ? (
           <p className="text-gray-500 dark:text-gray-400 text-sm">
-            You haven't marked any machines as "haven't played" yet. Use the "Haven't Played" button on machine cards to add them to this list.
+            You haven't marked any machines as haven't played yet. Use the 'X' button when viewing a machine to add it to this list.
           </p>
         ) : (
           <div>
