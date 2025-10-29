@@ -131,13 +131,13 @@ export default function TopBar({ user, onProfileClick, onMenuClick, onNavigate, 
       {/* Centered logo and text */}
       <button
         type="button"
-        className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center gap-1 select-none focus:outline-none"
+        className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center gap-1 select-none focus:outline-none sm:-ml-1"
         onClick={() => onNavigate && onNavigate('matchups')}
         aria-label="Go to Matchups"
         tabIndex={0}
       >
-        <img src="/favicon.svg" alt="pinranks logo" className="h-5 w-5" />
-        <span className="text-lg font-bold text-gray-900 dark:text-gray-100 tracking-tight">pinranks</span>
+        <img src="/favicon.svg" alt="pinranks logo" className="h-5 w-5 sm:h-6 sm:w-6" />
+        <span className="text-lg sm:text-xl font-bold text-gray-900 dark:text-gray-100 tracking-tight">pinranks</span>
       </button>
 
       {/* Profile/Sign In */}

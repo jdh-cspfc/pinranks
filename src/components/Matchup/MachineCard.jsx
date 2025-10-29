@@ -62,7 +62,7 @@ export default function MachineCard({
           {name}
         </h2>
       </div>
-      <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 mb-1 sm:mb-2 w-full">
+      <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 mb-3 sm:mb-2 w-full">
         <span>{year}</span>
         <span className="mx-1">·</span>
         <span>{manufacturer}</span>
