@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 
 /**
  * Custom hook for managing infinite scroll functionality
- * Handles intersection observer, loading states, and smooth item loading
+ * Uses scroll listener to detect when loading element becomes visible
  */
 export const useInfiniteScroll = (totalItems, initialDisplayCount = 50, loadMoreCount = 50) => {
   const [displayedCount, setDisplayedCount] = useState(initialDisplayCount);
@@ -11,7 +11,6 @@ export const useInfiniteScroll = (totalItems, initialDisplayCount = 50, loadMore
   const [newItemsLoaded, setNewItemsLoaded] = useState(false);
   
   const loadingRef = useRef(null);
-  const observerRef = useRef(null);
 
   // Calculate if there are more items to load
   const hasMoreItems = totalItems && displayedCount < totalItems;
@@ -44,42 +43,27 @@ export const useInfiniteScroll = (totalItems, initialDisplayCount = 50, loadMore
     }, 150);
   }, [isLoadingMore, hasMore, totalItems, loadMoreCount]);
 
-  // Intersection Observer for smooth loading
+  // Scroll listener for infinite loading
   useEffect(() => {
     if (!loadingRef.current) return;
 
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach(entry => {
-          if (entry.isIntersecting && hasMore && !isLoadingMore) {
-            loadMoreItems();
-          }
-        });
-      },
-      {
-        rootMargin: '200px', // Start loading 200px before reaching the element
-        threshold: 0.1
+    const handleScroll = () => {
+      if (!loadingRef.current || !hasMore || isLoadingMore) return;
+      
+      const rect = loadingRef.current.getBoundingClientRect();
+      const isVisible = rect.top < window.innerHeight && rect.bottom > 0;
+      
+      if (isVisible) {
+        loadMoreItems();
       }
-    );
+    };
 
-    observer.observe(loadingRef.current);
-    observerRef.current = observer;
+    window.addEventListener('scroll', handleScroll, { passive: true });
 
     return () => {
-      if (observerRef.current) {
-        observerRef.current.disconnect();
-      }
+      window.removeEventListener('scroll', handleScroll);
     };
   }, [hasMore, isLoadingMore, loadMoreItems]);
-
-  // Cleanup observer when component unmounts
-  useEffect(() => {
-    return () => {
-      if (observerRef.current) {
-        observerRef.current.disconnect();
-      }
-    };
-  }, []);
 
   // Reset displayed count (useful when filters change)
   const resetDisplayCount = useCallback(() => {
