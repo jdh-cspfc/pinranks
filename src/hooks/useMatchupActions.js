@@ -3,7 +3,7 @@
  * Handles the complex business logic for machine replacement and user preferences
  */
 
-import { useRef } from 'react';
+import { useRef, useEffect } from 'react';
 import { useBlockedMachines } from './useBlockedMachines';
 import { useConfirmationMessage } from './useConfirmationMessage';
 import { useMachineReplacement } from './useMachineReplacement';
@@ -12,7 +12,7 @@ import { useErrorHandler } from './useErrorHandler';
 import logger from '../utils/logger';
 
 export const useMatchupActions = (appData, matchup, setMatchup, filter, fetchMatchup) => {
-  const { handleError, handleAsyncOperation } = useErrorHandler('useMatchupActions');
+  const { handleError } = useErrorHandler('useMatchupActions');
   const { addBlockedMachine, removeBlockedMachine, blockedMachines } = useBlockedMachines(appData);
   const { message: confirmationMessage, showMessage, clearMessage, cleanup } = useConfirmationMessage();
   
@@ -21,6 +21,35 @@ export const useMatchupActions = (appData, matchup, setMatchup, filter, fetchMat
   
   // Store pending undo actions - use a Map to track multiple concurrent actions
   const pendingUndoActionsRef = useRef(new Map());
+  
+  // Store the addBlockedMachine function in a ref to avoid useEffect dependency issues
+  const addBlockedMachineRef = useRef(addBlockedMachine);
+  addBlockedMachineRef.current = addBlockedMachine;
+
+  // Cleanup on unmount - finalize any pending Firebase writes since the user navigated away
+  useEffect(() => {
+    return () => {
+      // When the component unmounts, save any pending actions to Firebase immediately
+      if (pendingUndoActionsRef.current.size > 0) {
+        logger.info('data', 'Component unmounting, finalizing pending Firebase writes');
+        pendingUndoActionsRef.current.forEach((action, groupId) => {
+          // Cancel the timeout
+          clearTimeout(action.firebaseTimeout);
+          // Immediately save to Firebase
+          logger.info('data', `Finalizing save of ${action.machineName} (${groupId}) to Firebase`);
+          addBlockedMachineRef.current(groupId)
+            .then(() => {
+              logger.info('data', `Successfully finalized save of ${action.machineName} to blocked list in Firebase`);
+            })
+            .catch(err => {
+              logger.error('data', `Failed to finalize save of ${action.machineName} to blocked list: ${err.message}`);
+              console.error('Final Firebase update failed:', err);
+            });
+        });
+        pendingUndoActionsRef.current.clear();
+      }
+    };
+  }, []); // Empty dependency array since we use refs for everything
 
   // Create a function that handles the "haven't played" logic
   const createHandleHaventPlayed = () => {
@@ -32,6 +61,32 @@ export const useMatchupActions = (appData, matchup, setMatchup, filter, fetchMat
         machine = matchup.machines[machineIndex];
         groupId = machine.opdb_id.split('-')[0];
         isMobile = window.innerWidth < UI_CONSTANTS.MOBILE_BREAKPOINT;
+        
+        // If there are any pending undo actions, cancel them and immediately save to Firebase
+        // because the user pressed another X, replacing the undo button
+        if (pendingUndoActionsRef.current.size > 0) {
+          logger.info('undo', 'Another machine marked, cancelling pending undo actions and saving immediately');
+          pendingUndoActionsRef.current.forEach((action, existingGroupId) => {
+            // Cancel the timeout
+            clearTimeout(action.firebaseTimeout);
+            // Immediately save to Firebase since undo is no longer possible
+            logger.info('data', `Immediately saving ${action.machineName} (${existingGroupId}) to Firebase`);
+            addBlockedMachine(existingGroupId)
+              .then(() => {
+                logger.info('data', `Successfully saved ${action.machineName} to blocked list in Firebase`);
+              })
+              .catch(err => {
+                logger.error('data', `Failed to save ${action.machineName} to blocked list: ${err.message}`);
+                console.error('Firebase update failed:', err);
+                handleError(err, { 
+                  action: 'addBlockedMachine_immediate_failed', 
+                  metadata: { groupId: existingGroupId, machineName: action.machineName }
+                });
+              });
+          });
+          // Clear all pending actions
+          pendingUndoActionsRef.current.clear();
+        }
         
         // OPTIMISTIC APPROACH: Update local state immediately for better UX
         // Create the updated blocked machines list locally
