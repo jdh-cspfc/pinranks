@@ -166,6 +166,29 @@ export class UserDataService {
       throw error;
     }
   }
+
+  static async clearAllBlockedMachines(userId) {
+    if (!userId) throw new Error('User ID is required');
+    
+    try {
+      logger.info('firebase', `Clearing all blocked machines for user ${userId}`);
+      const userPrefsRef = doc(db, 'userPreferences', userId);
+      await setDoc(userPrefsRef, {
+        blockedMachines: [],
+        lastUpdated: new Date().toISOString()
+      }, { merge: true });
+      logger.info('firebase', `Successfully cleared all blocked machines for user ${userId}`);
+      return true;
+    } catch (error) {
+      logger.error('firebase', `Error clearing blocked machines for user ${userId}: ${error.message}`);
+      errorService.logError(error, {
+        component: 'UserDataService',
+        action: 'clearAllBlockedMachines',
+        metadata: { userId }
+      });
+      throw error;
+    }
+  }
 }
 
 /**

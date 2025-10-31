@@ -137,10 +137,10 @@ export default function Matchup({ appData }) {
       {/* Toast Notification with Undo */}
       {confirmationMessage && (
         <div className="fixed bottom-4 left-4 right-4 sm:left-auto sm:right-4 sm:max-w-md z-50 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 px-4 py-3 rounded-lg shadow-lg">
-          <div className="flex items-center justify-between gap-4">
-            <div className="flex items-start gap-2.5 flex-1 min-w-0">
-              <div className="w-2 h-2 bg-green-500 rounded-full flex-shrink-0 mt-1"></div>
-              <span className="text-sm break-words">{confirmationMessage.text || confirmationMessage}</span>
+          <div className={`flex items-center ${confirmationMessage.onUndo ? 'justify-between gap-4' : ''}`}>
+            <div className="flex items-center gap-2.5 flex-1 min-w-0">
+              <div className="w-2 h-2 bg-green-500 rounded-full flex-shrink-0"></div>
+              <div className="text-sm break-words" style={{ overflowWrap: 'anywhere', wordBreak: 'break-word' }}>{confirmationMessage.text || confirmationMessage}</div>
             </div>
             {confirmationMessage.onUndo && (
               <button 

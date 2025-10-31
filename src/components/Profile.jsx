@@ -24,12 +24,14 @@ export default function Profile({ appData }) {
   const { 
     blockedMachines, 
     addBlockedMachine,
-    removeBlockedMachine, 
+    removeBlockedMachine,
+    clearAllBlockedMachines, 
     isLoading: isUserDataLoading 
   } = useBlockedMachines(appData);
   
   const [showAllMachines, setShowAllMachines] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   
   // Store pending undo actions
   const pendingUndoRef = useRef(null);
@@ -126,6 +128,25 @@ export default function Profile({ appData }) {
     }
   };
 
+  const handleClearAll = async () => {
+    try {
+      // Clear all blocked machines
+      await clearAllBlockedMachines();
+      
+      // Close the confirmation dialog
+      setShowConfirmDialog(false);
+      
+      // Show success message without undo button
+      showMessage('All machines removed from Haven\'t Played list');
+      
+    } catch (err) {
+      handleError(err, { 
+        action: 'clearAllBlockedMachines', 
+        userMessage: 'Failed to clear all machines. Please try again.'
+      });
+    }
+  };
+
   if (isLoading) {
     return null; // Removed loading box for testing
   }
@@ -135,6 +156,7 @@ export default function Profile({ appData }) {
   }
 
   return (
+    <>
     <Card>
       <h2 className="text-2xl font-bold mb-4 text-gray-900 dark:text-gray-100">
         {user?.displayName || user?.email?.split('@')[0] || 'User'}'s Profile
@@ -151,10 +173,10 @@ export default function Profile({ appData }) {
       {/* Toast Notification with Undo */}
       {confirmationMessage && (
         <div className="fixed bottom-4 left-4 right-4 sm:left-auto sm:right-4 sm:max-w-md z-50 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 px-4 py-3 rounded-lg shadow-lg">
-          <div className="flex items-center justify-between gap-4">
-            <div className="flex items-start gap-2.5 flex-1 min-w-0">
-              <div className="w-2 h-2 bg-green-500 rounded-full flex-shrink-0 mt-1"></div>
-              <span className="text-sm break-words">{confirmationMessage.text || confirmationMessage}</span>
+          <div className={`flex items-center ${confirmationMessage.onUndo ? 'justify-between gap-4' : ''}`}>
+            <div className="flex items-center gap-2.5 flex-1 min-w-0">
+              <div className="w-2 h-2 bg-green-500 rounded-full flex-shrink-0"></div>
+              <div className="text-sm break-words" style={{ overflowWrap: 'anywhere', wordBreak: 'break-word' }}>{confirmationMessage.text || confirmationMessage}</div>
             </div>
             {confirmationMessage.onUndo && (
               <button 
@@ -306,25 +328,33 @@ export default function Profile({ appData }) {
                     })}
                   </div>
                   
-                  {/* Show "View All" button if more than 3 and not already expanded */}
-                  {!showAllMachines && filteredMachines.length > 3 && (
-                    <button 
-                      onClick={() => setShowAllMachines(true)}
-                      className="text-blue-600 dark:text-blue-400 text-sm hover:underline"
+                  {/* Show "View All" / "Show Less" button and "Remove All" button */}
+                  <div className="flex items-center gap-3">
+                    {!showAllMachines && filteredMachines.length > 3 && (
+                      <button 
+                        onClick={() => setShowAllMachines(true)}
+                        className="text-blue-600 dark:text-blue-400 text-sm hover:underline"
+                      >
+                        View All {filteredMachines.length} Machines
+                      </button>
+                    )}
+                    
+                    {showAllMachines && filteredMachines.length > 3 && (
+                      <button 
+                        onClick={() => setShowAllMachines(false)}
+                        className="text-blue-600 dark:text-blue-400 text-sm hover:underline"
+                      >
+                        Show Less
+                      </button>
+                    )}
+                    
+                    <button
+                      onClick={() => setShowConfirmDialog(true)}
+                      className="text-xs bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600 transition-colors ml-auto"
                     >
-                      View All {filteredMachines.length} Machines
+                      Remove All
                     </button>
-                  )}
-                  
-                  {/* Show "Show Less" button when expanded */}
-                  {showAllMachines && filteredMachines.length > 3 && (
-                    <button 
-                      onClick={() => setShowAllMachines(false)}
-                      className="text-blue-600 dark:text-blue-400 text-sm hover:underline"
-                    >
-                      Show Less
-                    </button>
-                  )}
+                  </div>
                 </>
               );
             })()}
@@ -350,5 +380,34 @@ export default function Profile({ appData }) {
         </button>
       </div>
     </Card>
+
+    {/* Confirmation Dialog */}
+    {showConfirmDialog && (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full p-6">
+          <h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100 text-center">
+            Remove All Machines?
+          </h3>
+          <p className="text-gray-700 dark:text-gray-300 mb-6">
+            Are you sure you want to remove all machines from your Haven't Played list? This action cannot be undone.
+          </p>
+          <div className="flex gap-3 justify-center">
+            <button
+              onClick={() => setShowConfirmDialog(false)}
+              className="px-4 py-2 bg-gray-300 dark:bg-gray-600 text-gray-900 dark:text-gray-100 rounded hover:bg-gray-400 dark:hover:bg-gray-500 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleClearAll}
+              className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
+            >
+              Remove All
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+    </>
   );
 }

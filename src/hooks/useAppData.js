@@ -213,6 +213,39 @@ export const useAppData = () => {
     }
   }, [user, userPreferences.blockedMachines, handleError]);
 
+  const clearAllBlockedMachines = useCallback(async () => {
+    if (!user) {
+      throw new Error('You must be logged in to use this feature.');
+    }
+
+    // Store original state for rollback
+    const originalBlockedMachines = [...userPreferences.blockedMachines];
+
+    try {
+      // Optimistic update: immediately update local state
+      setUserPreferences(prev => ({ ...prev, blockedMachines: [] }));
+
+      // Update Firebase in the background
+      await UserDataService.clearAllBlockedMachines(user.uid);
+      
+      // Refresh rankings to restore any rankings for the unblocked machines
+      logger.debug('data', 'Refreshing rankings after clearing all blocked machines');
+      const rankings = await UserDataService.getUserRankings(user.uid);
+      
+      // No need to filter since all blocked machines are cleared
+      setUserRankings(rankings);
+      logger.info('data', 'Refreshed rankings after clearing all blocked machines');
+      
+      return true;
+    } catch (error) {
+      // Rollback: restore original state if Firebase update failed
+      setUserPreferences(prev => ({ ...prev, blockedMachines: originalBlockedMachines }));
+      
+      handleError(error, { action: 'clearAllBlockedMachines', metadata: { userId: user.uid } });
+      throw error;
+    }
+  }, [user, userPreferences.blockedMachines, handleError]);
+
   // Refresh user data
   const refreshUserData = useCallback(async () => {
     if (!user) return;
@@ -261,6 +294,7 @@ export const useAppData = () => {
     // Helper functions
     addBlockedMachine,
     removeBlockedMachine,
+    clearAllBlockedMachines,
     isMachineBlocked,
     refreshUserData,
     

@@ -12,7 +12,8 @@ export const useBlockedMachines = (appData) => {
     userPreferences, 
     isUserDataLoading,
     addBlockedMachine, 
-    removeBlockedMachine, 
+    removeBlockedMachine,
+    clearAllBlockedMachines, 
     isMachineBlocked 
   } = appData;
 
@@ -34,6 +35,13 @@ export const useBlockedMachines = (appData) => {
         throw new Error('You must be logged in to use this feature.');
       }
       return removeBlockedMachine(groupId);
+    },
+    
+    clearAllBlockedMachines: async () => {
+      if (!user) {
+        throw new Error('You must be logged in to use this feature.');
+      }
+      return clearAllBlockedMachines();
     },
     
     // Utilities
