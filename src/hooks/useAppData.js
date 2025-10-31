@@ -134,11 +134,18 @@ export const useAppData = () => {
 
     try {
       logger.info('data', `Adding ${groupId} to blocked machines for user ${user.uid}`);
+      
+      // Get current state for the service call
+      const currentBlockedMachines = userPreferences.blockedMachines;
+      
       const newBlockedMachines = await UserDataService.addBlockedMachine(
         user.uid, 
         groupId, 
-        userPreferences.blockedMachines
+        currentBlockedMachines
       );
+      
+      // Use the value from Firebase which includes all concurrent writes
+      // We always use the Firebase result since it's the source of truth
       setUserPreferences(prev => ({ ...prev, blockedMachines: newBlockedMachines }));
       
       // Also filter out the blocked machine from current rankings

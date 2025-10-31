@@ -4,7 +4,7 @@
  */
 
 import { db, auth } from '../firebase';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, arrayUnion } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
 import errorService from './errorService';
 import logger from '../utils/logger';
@@ -139,10 +139,32 @@ export class UserDataService {
       return currentBlockedMachines; // Return the existing array unchanged
     }
     
-    const newBlockedMachines = [...currentBlockedMachines, groupId];
-    await this.updateUserPreferences(userId, { blockedMachines: newBlockedMachines });
-    logger.info('firebase', `Successfully added ${groupId} to blocked machines for user ${userId}`);
-    return newBlockedMachines;
+    // Use arrayUnion to atomically add to the array, preventing race conditions
+    try {
+      const userPrefsRef = doc(db, 'userPreferences', userId);
+      await updateDoc(userPrefsRef, {
+        blockedMachines: arrayUnion(groupId),
+        lastUpdated: new Date().toISOString()
+      });
+      
+      // Fetch the updated value from Firebase to get the actual state
+      // This ensures we return the true value even if other concurrent writes happened
+      const updatedPrefsSnap = await getDoc(userPrefsRef);
+      const updatedBlockedMachines = updatedPrefsSnap.exists() && updatedPrefsSnap.data().blockedMachines
+        ? updatedPrefsSnap.data().blockedMachines
+        : [...currentBlockedMachines, groupId];
+      
+      logger.info('firebase', `Successfully added ${groupId} to blocked machines for user ${userId}`);
+      return updatedBlockedMachines;
+    } catch (error) {
+      logger.error('firebase', `Error adding blocked machine ${groupId} for user ${userId}: ${error.message}`);
+      errorService.logError(error, {
+        component: 'UserDataService',
+        action: 'addBlockedMachine',
+        metadata: { userId, groupId }
+      });
+      throw error;
+    }
   }
 }
 

@@ -19,8 +19,8 @@ export const useMatchupActions = (appData, matchup, setMatchup, filter, fetchMat
   // Use the new machine replacement hook
   const { replaceMachine } = useMachineReplacement(matchup, setMatchup, filter, appData.user, appData.userPreferences);
   
-  // Store pending undo actions
-  const pendingUndoRef = useRef(null);
+  // Store pending undo actions - use a Map to track multiple concurrent actions
+  const pendingUndoActionsRef = useRef(new Map());
 
   // Create a function that handles the "haven't played" logic
   const createHandleHaventPlayed = () => {
@@ -67,21 +67,16 @@ export const useMatchupActions = (appData, matchup, setMatchup, filter, fetchMat
           // Machine replaced successfully
           const newMachine = result.newMachine;
           
-          // Cancel any existing pending undo
-          if (pendingUndoRef.current) {
-            clearTimeout(pendingUndoRef.current.firebaseTimeout);
-            pendingUndoRef.current = null;
-          }
-          
           // Create undo function
           const handleUndo = async () => {
             try {
               logger.info('undo', `Undoing block of ${originalMachine.name} (${groupId})`);
               
               // Cancel the pending Firebase write
-              if (pendingUndoRef.current) {
-                clearTimeout(pendingUndoRef.current.firebaseTimeout);
-                pendingUndoRef.current = null;
+              const pendingAction = pendingUndoActionsRef.current.get(groupId);
+              if (pendingAction) {
+                clearTimeout(pendingAction.firebaseTimeout);
+                pendingUndoActionsRef.current.delete(groupId);
               }
               
               // Restore the original matchup state
@@ -113,7 +108,7 @@ export const useMatchupActions = (appData, matchup, setMatchup, filter, fetchMat
             addBlockedMachine(groupId)
               .then(() => {
                 logger.info('data', `Successfully saved ${originalMachine.name} to blocked list in Firebase`);
-                pendingUndoRef.current = null;
+                pendingUndoActionsRef.current.delete(groupId);
               })
               .catch(err => {
                 logger.error('data', `Failed to save ${originalMachine.name} to blocked list: ${err.message}`);
@@ -127,16 +122,16 @@ export const useMatchupActions = (appData, matchup, setMatchup, filter, fetchMat
                   metadata: { groupId, machineName: originalMachine.name }
                 });
                 
-                pendingUndoRef.current = null;
+                pendingUndoActionsRef.current.delete(groupId);
               });
           }, 5000); // Wait 5 seconds before saving to Firebase
           
           // Store the pending action for potential cancellation
-          pendingUndoRef.current = {
+          pendingUndoActionsRef.current.set(groupId, {
             groupId,
             machineName: originalMachine.name,
             firebaseTimeout
-          };
+          });
           
           return { success: true, machineName: originalMachine.name };
         } else if (result.needsRefresh) {
