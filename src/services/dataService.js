@@ -85,9 +85,10 @@ export class UserDataService {
         const data = rankingsSnap.data().rankings || {};
         logger.debug('firebase', `Found ${Object.keys(data).length} rankings for user ${userId}`);
         // Process rankings data into sorted array
+        // Rankings are now stored at the group level (groupId), not individual machine variant level
         const processedRankings = Object.entries(data)
-          .map(([machineId, eloObj]) => ({
-            machineId,
+          .map(([groupId, eloObj]) => ({
+            groupId,
             eloObj: eloObj && typeof eloObj === 'object' ? eloObj : { all: eloObj ?? 1200 }
           }))
           .sort((a, b) => (b.eloObj.all ?? 1200) - (a.eloObj.all ?? 1200));

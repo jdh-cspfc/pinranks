@@ -131,20 +131,35 @@ async function downloadMachineImages(machine) {
     
     if (response.data.success) {
       const actions = response.data.actions || {};
+      const errors = response.data.errors || {};
       const downloaded = Object.values(actions).filter(a => a === 'downloaded').length;
       const skipped = Object.values(actions).filter(a => a === 'skipped').length;
-      
+      const failed = Object.values(actions).filter(a => a === 'failed').length;
 
-      
       if (downloaded > 0) {
         console.log(`✅ Downloaded ${downloaded} new images for ${machine.opdb_id}`);
-      } else if (skipped > 0) {
+      }
+      if (skipped > 0) {
         console.log(`⏭️  Skipped ${skipped} existing images for ${machine.opdb_id}`);
-      } else {
-        console.log(`✅ Processed images for ${machine.opdb_id}`);
+      }
+      if (failed > 0) {
+        console.log(`❌ Failed to download ${failed} images for ${machine.opdb_id}`);
+        // Log detailed error information
+        Object.entries(errors).forEach(([size, errorInfo]) => {
+          const statusCode = errorInfo.statusCode || 'unknown';
+          const errorMsg = errorInfo.error || 'Unknown error';
+          console.log(`   ${size}: ${errorMsg} (HTTP ${statusCode})`);
+          if (errorInfo.url) {
+            console.log(`   URL: ${errorInfo.url}`);
+          }
+        });
       }
       
-      return { ...response.data, downloaded, skipped };
+      if (downloaded === 0 && skipped === 0 && failed === 0) {
+        console.log(`⚠️  No images processed for ${machine.opdb_id} (no actions returned)`);
+      }
+      
+      return { ...response.data, downloaded, skipped, failed };
     } else {
       console.log(`❌ Failed to process images for ${machine.opdb_id}: ${response.data.error}`);
       return { success: false, error: response.data.error };
@@ -216,6 +231,7 @@ async function main() {
     failed: 0,
     downloaded: 0,
     skipped: 0,
+    imageFailures: 0,
     errors: [],
     machinesWithDownloads: 0
   };
@@ -234,6 +250,7 @@ async function main() {
       results.successful++;
       results.downloaded += result.downloaded || 0;
       results.skipped += result.skipped || 0;
+      results.imageFailures += result.failed || 0;
       
       // Only count as a "download" if we actually downloaded new images
       if ((result.downloaded || 0) > 0) {
@@ -265,9 +282,10 @@ async function main() {
   console.log(`   Total processed: ${results.total}`);
   console.log(`   Machines with actual downloads: ${results.machinesWithDownloads}`);
   console.log(`   Successful: ${results.successful}`);
-  console.log(`   Failed: ${results.failed}`);
+  console.log(`   Failed machines: ${results.failed}`);
   console.log(`   New images downloaded: ${results.downloaded}`);
   console.log(`   Images skipped (already existed): ${results.skipped}`);
+  console.log(`   Image download failures: ${results.imageFailures}`);
   console.log(`   Progress saved: ${currentIndex}/${filteredMachines.length} ${options.priority} machines processed`);
   console.log(`   Download target: ${downloadsCount}/${options.limit} machines with downloads`);
   

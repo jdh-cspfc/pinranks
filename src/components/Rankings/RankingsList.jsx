@@ -33,20 +33,24 @@ export default function RankingsList({
   isLoadingMore, 
   loadingRef 
 }) {
-  // Helper function to get machine information
-  const getMachineInfo = (machineId) => {
+  // Helper function to get machine information from group ID
+  // Rankings are stored at the group level, so we need to find a representative machine from the group
+  const getMachineInfo = (groupId) => {
     if (!machines || !groups) return null;
     
-    const machine = machines.find(m => m.opdb_id === machineId);
-    if (!machine) return null;
-    
-    const groupId = machine.opdb_id.split('-')[0];
+    // Find the group
     const group = groups.find(g => g.opdb_id === groupId);
-    const name = group?.name || machine.name;
-    const year = machine.manufacture_date ? machine.manufacture_date.slice(0, 4) : 'Unknown';
-    const manufacturer = machine.manufacturer?.name || 'Unknown';
+    if (!group) return null;
     
-    return { name, year, manufacturer, display: machine.display };
+    // Find any machine in this group to get metadata (manufacturer, year, display type)
+    const machine = machines.find(m => m.opdb_id.startsWith(groupId + '-'));
+    
+    const name = group?.name || machine?.name || 'Unknown';
+    const year = machine?.manufacture_date ? machine.manufacture_date.slice(0, 4) : 'Unknown';
+    const manufacturer = machine?.manufacturer?.name || 'Unknown';
+    const display = machine?.display || null;
+    
+    return { name, year, manufacturer, display };
   };
 
   // Filter and sort rankings based on active tab
@@ -55,7 +59,8 @@ export default function RankingsList({
 
     return rankings
       .map(item => {
-        const info = getMachineInfo(item.machineId);
+        // Rankings now use groupId instead of machineId
+        const info = getMachineInfo(item.groupId || item.machineId); // Support both for backward compatibility during migration
         if (!info) return null;
         
         // Get the appropriate score based on activeTab
@@ -92,7 +97,7 @@ export default function RankingsList({
           const isNewItem = idx >= displayedCount - 50 && newItemsLoaded;
           return (
             <li 
-              key={item.machineId} 
+              key={item.groupId || item.machineId} 
               className="mb-2 text-xs md:text-sm text-gray-800 dark:text-gray-200"
             >
               <span className="font-semibold">{item.info.name}</span>

@@ -13,17 +13,18 @@ const requestQueues = new Map();
 
 /**
  * Save a user vote to Firestore
+ * Votes are stored at the group level, consistent with rankings
  * @param {string} userId - The user's UID
- * @param {string} winnerId - OPDB ID of the winning machine
- * @param {string} loserId - OPDB ID of the losing machine
+ * @param {string} winnerGroupId - OPDB group ID of the winning machine
+ * @param {string} loserGroupId - OPDB group ID of the losing machine
  * @throws {Error} If the vote cannot be saved
  */
-export const saveVoteToFirestore = async (userId, winnerId, loserId) => {
+export const saveVoteToFirestore = async (userId, winnerGroupId, loserGroupId) => {
   try {
     await addDoc(collection(db, 'userVotes'), {
       userId,
-      winnerId,
-      loserId,
+      winnerGroupId,
+      loserGroupId,
       timestamp: serverTimestamp(),
     });
   } catch (err) {
@@ -33,15 +34,16 @@ export const saveVoteToFirestore = async (userId, winnerId, loserId) => {
 };
 
 /**
- * Update Elo rankings for both machines using a Firestore transaction
+ * Update Elo rankings for both machine groups using a Firestore transaction
+ * Rankings are stored at the group level, not individual machine variant level
  * @param {string} userId - The user's UID
- * @param {string} winnerId - OPDB ID of the winning machine
- * @param {string} loserId - OPDB ID of the losing machine
- * @param {string} winnerGroup - Filter group of the winning machine (e.g., 'EM', 'DMD')
- * @param {string} loserGroup - Filter group of the losing machine
+ * @param {string} winnerGroupId - OPDB group ID of the winning machine (first part of opdb_id)
+ * @param {string} loserGroupId - OPDB group ID of the losing machine
+ * @param {string} winnerFilterGroup - Filter group of the winning machine (e.g., 'EM', 'DMD')
+ * @param {string} loserFilterGroup - Filter group of the losing machine
  * @throws {Error} If the rankings cannot be updated
  */
-export const updateEloRankings = async (userId, winnerId, loserId, winnerGroup, loserGroup) => {
+export const updateEloRankings = async (userId, winnerGroupId, loserGroupId, winnerFilterGroup, loserFilterGroup) => {
   const rankingsRef = doc(db, 'userRankings', userId);
   const { BASE_SCORE } = ELO_CONFIG;
 
@@ -52,28 +54,28 @@ export const updateEloRankings = async (userId, winnerId, loserId, winnerGroup, 
       
       // Helper to get or initialize Elo object
       const getEloObj = (obj) => obj && typeof obj === 'object' ? { ...obj } : { all: obj ?? BASE_SCORE };
-      const winnerElo = getEloObj(rankings[winnerId]);
-      const loserElo = getEloObj(rankings[loserId]);
+      const winnerElo = getEloObj(rankings[winnerGroupId]);
+      const loserElo = getEloObj(rankings[loserGroupId]);
       
       // Always update 'all' Elo
       const [newWinnerAll, newLoserAll] = calculateElo(winnerElo.all ?? BASE_SCORE, loserElo.all ?? BASE_SCORE);
       winnerElo.all = newWinnerAll;
       loserElo.all = newLoserAll;
       
-      // Update filter-specific Elo if both are in the same group
-      if (winnerGroup && winnerGroup === loserGroup) {
+      // Update filter-specific Elo if both are in the same filter group
+      if (winnerFilterGroup && winnerFilterGroup === loserFilterGroup) {
         const [newWinnerF, newLoserF] = calculateElo(
-          winnerElo[winnerGroup] ?? BASE_SCORE,
-          loserElo[winnerGroup] ?? BASE_SCORE
+          winnerElo[winnerFilterGroup] ?? BASE_SCORE,
+          loserElo[winnerFilterGroup] ?? BASE_SCORE
         );
-        winnerElo[winnerGroup] = newWinnerF;
-        loserElo[winnerGroup] = newLoserF;
+        winnerElo[winnerFilterGroup] = newWinnerF;
+        loserElo[winnerFilterGroup] = newLoserF;
       }
       
       rankings = {
         ...rankings,
-        [winnerId]: winnerElo,
-        [loserId]: loserElo,
+        [winnerGroupId]: winnerElo,
+        [loserGroupId]: loserElo,
       };
       
       transaction.set(rankingsRef, { rankings }, { merge: true });
@@ -159,16 +161,17 @@ const processQueue = async (userId) => {
 /**
  * Process a complete vote: save to Firestore and update Elo rankings
  * Uses queuing to prevent concurrent writes to the same user's rankings
+ * Both votes and rankings are stored at the group level (groupId)
  * @param {string} userId - The user's UID
- * @param {string} winnerId - OPDB ID of the winning machine
- * @param {string} loserId - OPDB ID of the losing machine
- * @param {string} winnerGroup - Filter group of the winning machine
- * @param {string} loserGroup - Filter group of the losing machine
+ * @param {string} winnerGroupId - OPDB group ID of the winning machine
+ * @param {string} loserGroupId - OPDB group ID of the losing machine
+ * @param {string} winnerFilterGroup - Filter group of the winning machine (e.g., 'EM', 'DMD')
+ * @param {string} loserFilterGroup - Filter group of the losing machine
  * @throws {Error} If any part of the voting process fails
  */
-export const processVote = async (userId, winnerId, loserId, winnerGroup, loserGroup) => {
+export const processVote = async (userId, winnerGroupId, loserGroupId, winnerFilterGroup, loserFilterGroup) => {
   return queueVoteRequest(userId, async () => {
-    await saveVoteToFirestore(userId, winnerId, loserId);
-    await updateEloRankings(userId, winnerId, loserId, winnerGroup, loserGroup);
+    await saveVoteToFirestore(userId, winnerGroupId, loserGroupId);
+    await updateEloRankings(userId, winnerGroupId, loserGroupId, winnerFilterGroup, loserFilterGroup);
   });
 };

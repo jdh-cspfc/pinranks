@@ -99,8 +99,10 @@ export const useAppData = () => {
         ]);
         
         // Filter rankings to exclude machines from blocked machine groups
+        // Rankings now use groupId directly (backward compatible with machineId during migration)
         const filteredRankings = rankings.filter(ranking => {
-          const groupId = ranking.machineId.split('-')[0];
+          const groupId = ranking.groupId || ranking.machineId?.split('-')[0];
+          if (!groupId) return false; // Skip invalid rankings
           return !preferences.blockedMachines.some(blockedId => groupId.startsWith(blockedId));
         });
         
@@ -151,7 +153,9 @@ export const useAppData = () => {
       // Also filter out the blocked machine from current rankings
       if (userRankings) {
         const filteredRankings = userRankings.filter(ranking => {
-          const rankingGroupId = ranking.machineId.split('-')[0];
+          // Rankings now use groupId directly (backward compatible with machineId during migration)
+          const rankingGroupId = ranking.groupId || ranking.machineId?.split('-')[0];
+          if (!rankingGroupId) return false; // Skip invalid rankings
           return !rankingGroupId.startsWith(groupId);
         });
         setUserRankings(filteredRankings);
@@ -195,8 +199,10 @@ export const useAppData = () => {
       const rankings = await UserDataService.getUserRankings(user.uid);
       
       // Filter rankings with the updated blocked machines list
+      // Rankings now use groupId directly (backward compatible with machineId during migration)
       const filteredRankings = rankings.filter(ranking => {
-        const rankingGroupId = ranking.machineId.split('-')[0];
+        const rankingGroupId = ranking.groupId || ranking.machineId?.split('-')[0];
+        if (!rankingGroupId) return false; // Skip invalid rankings
         return !newBlockedMachines.some(blockedId => rankingGroupId.startsWith(blockedId));
       });
       
@@ -258,8 +264,10 @@ export const useAppData = () => {
       ]);
       
       // Filter rankings to exclude machines from blocked machine groups
+      // Rankings now use groupId directly (backward compatible with machineId during migration)
       const filteredRankings = rankings.filter(ranking => {
-        const groupId = ranking.machineId.split('-')[0];
+        const groupId = ranking.groupId || ranking.machineId?.split('-')[0];
+        if (!groupId) return false; // Skip invalid rankings
         return !preferences.blockedMachines.some(blockedId => groupId.startsWith(blockedId));
       });
       

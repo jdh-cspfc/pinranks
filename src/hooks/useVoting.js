@@ -24,10 +24,14 @@ export const useVoting = (user, matchup, fetchMatchup) => {
     }
     
     const { machines } = matchup;
-    const winnerId = machines[winnerIndex].opdb_id;
-    const loserId = machines[1 - winnerIndex].opdb_id;
-    const winnerGroup = getFilterGroup(machines[winnerIndex].display);
-    const loserGroup = getFilterGroup(machines[1 - winnerIndex].display);
+    // Extract group IDs (first part of opdb_id before '-')
+    // Both votes and rankings use group IDs for consistency
+    const winnerGroupId = machines[winnerIndex].opdb_id.split('-')[0];
+    const loserGroupId = machines[1 - winnerIndex].opdb_id.split('-')[0];
+    
+    // Filter groups for category-specific rankings
+    const winnerFilterGroup = getFilterGroup(machines[winnerIndex].display);
+    const loserFilterGroup = getFilterGroup(machines[1 - winnerIndex].display);
     
     // Clear any previous messages
     clearMessages();
@@ -40,7 +44,7 @@ export const useVoting = (user, matchup, fetchMatchup) => {
     
     // Save vote and update rankings in background (queued automatically)
     try {
-      await processVote(user.uid, winnerId, loserId, winnerGroup, loserGroup);
+      await processVote(user.uid, winnerGroupId, loserGroupId, winnerFilterGroup, loserFilterGroup);
       // Success is handled optimistically by the UI (showing next matchup)
       // No need to show success message for normal voting flow
       // Rankings will be refreshed when user navigates to Rankings page
@@ -50,10 +54,10 @@ export const useVoting = (user, matchup, fetchMatchup) => {
         action: 'process_vote', 
         metadata: { 
           userId: user.uid, 
-          winnerId, 
-          loserId,
-          winnerGroup,
-          loserGroup
+          winnerGroupId,
+          loserGroupId,
+          winnerFilterGroup,
+          loserFilterGroup
         },
         userMessage: 'Failed to save your vote. Your ranking may not be updated.'
       });

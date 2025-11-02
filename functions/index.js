@@ -67,7 +67,13 @@ async function downloadAndStoreImage(imageUrl, fileName) {
       responseType: "arraybuffer",
       timeout: 30000, // 30 second timeout
       headers: {
-        "User-Agent": "PinRanks-Image-Downloader/1.0",
+        "User-Agent": "Mozilla/5.0 (compatible; PinRanks-Image-Downloader/1.0; +https://pinranks.com)",
+        "Accept": "image/webp,image/apng,image/*,*/*;q=0.8",
+        "Accept-Language": "en-US,en;q=0.9",
+        "Referer": "https://opdb.org/",
+      },
+      validateStatus: function (status) {
+        return status >= 200 && status < 300; // default
       },
     });
 
@@ -96,8 +102,17 @@ async function downloadAndStoreImage(imageUrl, fileName) {
       return {url: null, action: "downloaded"};
     }
   } catch (error) {
-    logger.error('firebase', `Failed to download/store image ${imageUrl}: ${error.message}`);
-    return null;
+    // Enhanced error logging
+    const errorDetails = {
+      message: error.message,
+      code: error.code,
+      status: error.response?.status,
+      statusText: error.response?.statusText,
+      url: imageUrl,
+      fileName: fileName,
+    };
+    logger.error('firebase', `Failed to download/store image: ${JSON.stringify(errorDetails)}`);
+    return {action: "failed", error: error.message, statusCode: error.response?.status, url: imageUrl};
   }
 }
 
@@ -123,6 +138,7 @@ exports.downloadMachineImages = functions.https.onRequest(async (req, res) => {
 
     const results = {};
     const actions = {};
+    const errors = {};
 
     // Download each image type
     for (const [size, url] of Object.entries(imageUrls)) {
@@ -130,17 +146,34 @@ exports.downloadMachineImages = functions.https.onRequest(async (req, res) => {
         const fileName = `${opdbId}-${size}.jpg`;
         const result = await downloadAndStoreImage(url, fileName);
         if (result) {
-          results[size] = result.url;
-          actions[size] = result.action;
+          if (result.action === "failed") {
+            actions[size] = "failed";
+            errors[size] = {
+              error: result.error,
+              statusCode: result.statusCode,
+              url: result.url,
+            };
+          } else {
+            results[size] = result.url;
+            actions[size] = result.action;
+          }
+        } else {
+          // This shouldn't happen anymore with the updated error handling, but just in case
+          actions[size] = "failed";
+          errors[size] = {error: "Unknown error", url: url};
         }
       }
     }
 
+    // Determine overall success based on whether any images succeeded
+    const hasSuccess = Object.values(actions).some(a => a === "downloaded" || a === "skipped");
+
     res.json({
-      success: true,
+      success: hasSuccess, // Success if at least one image was downloaded or skipped
       opdbId,
       images: results,
       actions: actions,
+      errors: Object.keys(errors).length > 0 ? errors : undefined,
     });
   } catch (error) {
     logger.error('firebase', `Error in downloadMachineImages: ${error.message}`);
