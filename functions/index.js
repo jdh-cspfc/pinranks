@@ -301,11 +301,12 @@ exports.checkImageStatus = functions.https.onRequest(async (req, res) => {
 /**
  * Helper function to fetch from OPDB API with rate limit handling and retries
  * @param {string} url - The OPDB API URL to fetch
+ * @param {string} apiToken - The OPDB API token for authentication
  * @param {number} retries - Number of retry attempts
  * @param {number} delay - Delay between retries in milliseconds
  * @return {Promise<Object>} The fetched JSON data
  */
-async function fetchFromOPDB(url, retries = 3, delay = 60000) {
+async function fetchFromOPDB(url, apiToken, retries = 3, delay = 60000) {
   for (let attempt = 1; attempt <= retries; attempt++) {
     try {
       logger.info(
@@ -314,6 +315,9 @@ async function fetchFromOPDB(url, retries = 3, delay = 60000) {
 
       const response = await axios.get(url, {
         timeout: 120000, // 2 minute timeout
+        params: {
+          api_token: apiToken,
+        },
         headers: {
           "User-Agent":
               "Mozilla/5.0 (compatible; PinRanks-OPDB-Fetcher/1.0; +https://pinranks.com)",
@@ -342,14 +346,25 @@ async function fetchFromOPDB(url, retries = 3, delay = 60000) {
         isLastAttempt: isLastAttempt,
       };
 
-      // Check for rate limit (429 status code)
-      if (error.response?.status === 429) {
+      // Check for authentication errors (401 status code)
+      if (error.response?.status === 401) {
+        logger.error(
+            "opdb",
+            `Authentication failed for ${url}. Check API token.`,
+            errorDetails);
+        throw new Error(
+            "OPDB API authentication failed. Check API token.");
+      }
+
+      // Check for rate limit (429) or 403 (Forbidden)
+      if (error.response?.status === 429 || error.response?.status === 403) {
         logger.warn(
             "opdb",
             `Rate limited on ${url}. Waiting 1 hour before retry.`,
             errorDetails);
         if (!isLastAttempt) {
           // Wait 1 hour (3600000 ms) for rate limit
+          // Note: /api/export is specifically rate limited to once per hour
           await new Promise((resolve) => setTimeout(resolve, 3600000));
           continue;
         }
@@ -415,11 +430,21 @@ async function syncOPDBDataCore() {
   const startTime = Date.now();
   logger.info("opdb-sync", "Starting OPDB data synchronization");
 
+  // Get API token from environment variable
+  // For v2 functions, use environment variables instead of functions.config()
+  const apiToken = process.env.OPDB_API_TOKEN;
+  if (!apiToken) {
+    throw new Error(
+        "OPDB API token not configured. Set it with: " +
+        "firebase functions:secrets:set OPDB_API_TOKEN");
+  }
+
   try {
-    // Fetch machines and groups in parallel
+    // Fetch machines and groups in parallel using export endpoints
+    // Note: /api/export is rate limited to once per hour
     const [machinesData, groupsData] = await Promise.all([
-      fetchFromOPDB("https://opdb.org/api/machines?per_page=10000"),
-      fetchFromOPDB("https://opdb.org/api/groups?per_page=10000"),
+      fetchFromOPDB("https://opdb.org/api/export", apiToken),
+      fetchFromOPDB("https://opdb.org/api/export/groups", apiToken),
     ]);
 
     // Upload both files to Storage
@@ -468,6 +493,7 @@ async function syncOPDBDataCore() {
 exports.syncOPDBData = functions.scheduler.onSchedule({
   schedule: "0 3 * * *",
   timeZone: "UTC",
+  secrets: ["OPDB_API_TOKEN"],
 }, async (event) => {
   try {
     await syncOPDBDataCore();
@@ -483,7 +509,9 @@ exports.syncOPDBData = functions.scheduler.onSchedule({
  * HTTP function to manually trigger OPDB data synchronization
  * Useful for testing or initial setup
  */
-exports.manualSyncOPDBData = functions.https.onRequest(async (req, res) => {
+exports.manualSyncOPDBData = functions.https.onRequest({
+  secrets: ["OPDB_API_TOKEN"],
+}, async (req, res) => {
   // Enable CORS
   res.set("Access-Control-Allow-Origin", "*");
   res.set("Access-Control-Allow-Methods", "GET, POST");
