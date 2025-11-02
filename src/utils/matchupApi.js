@@ -1,6 +1,8 @@
 // Simple API utilities for fetching data
 
-// Helper function to fetch with retry
+import { StaticDataService } from '../services/dataService';
+
+// Helper function to fetch with retry (for backward compatibility)
 export const fetchWithRetry = async (url, retries = 3) => {
   for (let i = 0; i < retries; i++) {
     try {
@@ -18,12 +20,8 @@ export const fetchWithRetry = async (url, retries = 3) => {
   }
 };
 
-// Helper to fetch machines and groups data
+// Helper to fetch machines and groups data from Firebase Storage
 export const fetchMachinesAndGroups = async () => {
-  const [machinesData, groupsData] = await Promise.all([
-    fetchWithRetry('/machines.json'),
-    fetchWithRetry('/groups.json')
-  ]);
-  
-  return { machinesData, groupsData };
+  const { machines, groups } = await StaticDataService.getMachinesAndGroups();
+  return { machinesData: machines, groupsData: groups };
 };

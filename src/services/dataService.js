@@ -3,9 +3,10 @@
  * Provides a single source of truth for data fetching and caching
  */
 
-import { db, auth } from '../firebase';
+import { db, auth, storage } from '../firebase';
 import { doc, getDoc, setDoc, updateDoc, arrayUnion } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
+import { ref, getDownloadURL } from 'firebase/storage';
 import errorService from './errorService';
 import logger from '../utils/logger';
 
@@ -13,20 +14,45 @@ import logger from '../utils/logger';
  * Static data service for machines and groups
  */
 export class StaticDataService {
-  static async getMachines() {
-    const response = await fetch('/machines.json');
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+  /**
+   * Helper to fetch JSON from Firebase Storage
+   * @param {string} fileName - Name of the JSON file in Storage
+   * @return {Promise<Object>} The JSON data
+   */
+  static async fetchJSONFromStorage(fileName) {
+    try {
+      logger.debug('firebase', `Fetching ${fileName} from Firebase Storage`);
+      
+      // Get download URL from Storage
+      const storageRef = ref(storage, fileName);
+      const downloadURL = await getDownloadURL(storageRef);
+      
+      // Fetch the JSON data
+      const response = await fetch(downloadURL);
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      logger.debug('firebase', `Successfully fetched ${fileName} from Storage`);
+      return data;
+    } catch (error) {
+      logger.error('firebase', `Failed to fetch ${fileName} from Storage: ${error.message}`);
+      errorService.logError(error, {
+        component: 'StaticDataService',
+        action: 'fetchJSONFromStorage',
+        metadata: { fileName }
+      });
+      throw error;
     }
-    return response.json();
+  }
+
+  static async getMachines() {
+    return this.fetchJSONFromStorage('machines.json');
   }
 
   static async getGroups() {
-    const response = await fetch('/groups.json');
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-    }
-    return response.json();
+    return this.fetchJSONFromStorage('groups.json');
   }
 
   static async getMachinesAndGroups() {

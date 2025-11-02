@@ -1,6 +1,7 @@
 import { initializeApp } from 'firebase/app'
 import { getAuth, setPersistence, browserLocalPersistence, GoogleAuthProvider, FacebookAuthProvider } from 'firebase/auth'
 import { getFirestore } from 'firebase/firestore'
+import { getStorage } from 'firebase/storage'
 import errorService from './services/errorService'
 
 const firebaseConfig = {
@@ -33,3 +34,4 @@ setPersistence(auth, browserLocalPersistence)
   })
 
 export const db = getFirestore(app)
+export const storage = getStorage(app)

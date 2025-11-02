@@ -4,6 +4,7 @@ import {
   selectBestMachineForGroup,
   filterMachinesByPreferences 
 } from './matchupSelectors';
+import { StaticDataService } from '../services/dataService';
 
 // Helper to find fallback machines when normal replacement fails
 const findFallbackMachine = (machinesData, groupsData, otherGroupId, user, userPreferences) => {
@@ -45,23 +46,8 @@ export const replaceMachineInMatchup = async (machineIndex, matchup, filter, use
   try {
     // Replacing machine at index
     
-    // Get current machines and groups data
-    const [machinesResponse, groupsResponse] = await Promise.all([
-      fetch('/machines.json'),
-      fetch('/groups.json')
-    ]);
-    
-    if (!machinesResponse.ok) {
-      throw new Error(`HTTP ${machinesResponse.status}: ${machinesResponse.statusText}`);
-    }
-    if (!groupsResponse.ok) {
-      throw new Error(`HTTP ${groupsResponse.status}: ${groupsResponse.statusText}`);
-    }
-    
-    const [machinesData, groupsData] = await Promise.all([
-      machinesResponse.json(),
-      groupsResponse.json()
-    ]);
+    // Get current machines and groups data from Firebase Storage
+    const { machines: machinesData, groups: groupsData } = await StaticDataService.getMachinesAndGroups();
 
     // Filter machines based on preferences
     let filteredMachines = filterMachinesByPreferences(machinesData, filter, user, userPreferences);
