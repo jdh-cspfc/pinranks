@@ -96,6 +96,15 @@ export const filterMachinesByPreferences = (machinesData, filter, user, userPref
   return filteredMachines;
 };
 
+const shuffleValidGroups = (validGroups) => {
+  const groups = validGroups.slice();
+  for (let i = groups.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [groups[i], groups[j]] = [groups[j], groups[i]];
+  }
+  return groups;
+};
+
 // Helper to select random matchup from filtered machines and groups
 export const selectRandomMatchup = (filteredMachines, groupsData) => {
   // Find all group IDs that have at least one machine in the filtered pool
@@ -103,7 +112,7 @@ export const selectRandomMatchup = (filteredMachines, groupsData) => {
   const validGroups = groupsData.filter(g => groupIdsWithMachines.has(g.opdb_id));
 
   // Pick two random, distinct valid groups
-  const shuffledGroups = validGroups.sort(() => 0.5 - Math.random()).slice(0, 2);
+  const shuffledGroups = shuffleValidGroups(validGroups).slice(0, 2);
 
   const selectedMachines = shuffledGroups.map(group =>
     selectBestMachineForGroup(group.opdb_id, filteredMachines, group.name)
