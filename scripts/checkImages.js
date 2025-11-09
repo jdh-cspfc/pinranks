@@ -11,9 +11,14 @@
  *   --start    Starting index in machines array (default: 0)
  */
 
-const fs = require('fs');
-const path = require('path');
-const axios = require('axios');
+import fs from 'fs';
+import path from 'path';
+import axios from 'axios';
+import { fileURLToPath } from 'url';
+import { filterMachinesByPriority } from '../src/utils/filterUtils.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Parse command line arguments
 const args = process.argv.slice(2);
@@ -33,9 +38,39 @@ args.forEach(arg => {
   }
 });
 
-// Load machines data
-const machinesPath = path.join(__dirname, '../public/machines.json');
-const machines = JSON.parse(fs.readFileSync(machinesPath, 'utf8'));
+const STORAGE_BUCKET = process.env.FIREBASE_STORAGE_BUCKET || 'pinranks-efabb.firebasestorage.app';
+const MACHINES_FILE = process.env.MACHINES_JSON_PATH || 'machines.json';
+const MACHINES_JSON_URL = process.env.MACHINES_JSON_URL ||
+  `https://firebasestorage.googleapis.com/v0/b/${STORAGE_BUCKET}/o/${encodeURIComponent(MACHINES_FILE)}?alt=media`;
+const LOCAL_MACHINES_PATH = path.join(__dirname, '../public/machines.json');
+
+function normalizeMachinesData(rawData) {
+  if (Array.isArray(rawData)) {
+    return rawData;
+  }
+
+  if (rawData && Array.isArray(rawData.machines)) {
+    return rawData.machines;
+  }
+
+  throw new Error('Unexpected machines.json format');
+}
+
+async function loadMachines() {
+  try {
+    console.log(`📡 Fetching machines from Firebase Storage: ${MACHINES_JSON_URL}`);
+    const response = await axios.get(MACHINES_JSON_URL, { timeout: 30000 });
+    const machines = normalizeMachinesData(response.data);
+    console.log(`✅ Loaded ${machines.length} machines from Firebase Storage`);
+    return machines;
+  } catch (error) {
+    if (fs.existsSync(LOCAL_MACHINES_PATH)) {
+      console.log(`⚠️  Falling back to local machines.json due to: ${error.message}`);
+      return normalizeMachinesData(JSON.parse(fs.readFileSync(LOCAL_MACHINES_PATH, 'utf8')));
+    }
+    throw new Error(`Failed to load machines.json from Firebase Storage and no local fallback available: ${error.message}`);
+  }
+}
 
 // Load configuration
 const configPath = path.join(__dirname, '../src/config.js');
@@ -95,10 +130,9 @@ function analyzeStatus(status, machine) {
   };
 }
 
-// Import shared filter utilities
-import { getFilterGroup, filterMachinesByPriority } from '../src/utils/filterUtils.js';
-
 async function main() {
+  const machines = await loadMachines();
+
   console.log(`🔍 Image Status Check`);
   console.log(`====================\n`);
   console.log(`   Total machines: ${machines.length}`);
