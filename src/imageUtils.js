@@ -8,6 +8,74 @@ const FIREBASE_FUNCTIONS_URL = FIREBASE_CONFIG.functionsUrl;
 
 // Cache for resolved image URLs to avoid repeated API calls
 const imageUrlCache = new Map();
+const LOCAL_STORAGE_KEY = 'pinranksImageCache';
+const isBrowser = typeof window !== 'undefined' && typeof window.localStorage !== 'undefined';
+
+function readPersistentCache() {
+  if (!isBrowser) return {};
+  try {
+    const raw = window.localStorage.getItem(LOCAL_STORAGE_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === 'object' ? parsed : {};
+  } catch (error) {
+    // Corrupted cache; clear it out
+    try {
+      window.localStorage.removeItem(LOCAL_STORAGE_KEY);
+    } catch (_) {
+      // Ignore secondary errors
+    }
+    return {};
+  }
+}
+
+function writePersistentCache(cache) {
+  if (!isBrowser) return;
+  try {
+    window.localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(cache));
+  } catch (error) {
+    // If storage quota exceeded or blocking, clear entry for safety
+    try {
+      window.localStorage.removeItem(LOCAL_STORAGE_KEY);
+    } catch (_) {
+      // Ignore secondary errors
+    }
+  }
+}
+
+function getPersistentCachedUrl(cacheKey) {
+  if (!isBrowser) return null;
+  const cache = readPersistentCache();
+  const entry = cache[cacheKey];
+  if (!entry) return null;
+
+  if (typeof entry.expiresAt === 'number' && entry.expiresAt <= Date.now()) {
+    delete cache[cacheKey];
+    writePersistentCache(cache);
+    return null;
+  }
+
+  return typeof entry.url === 'string' ? entry.url : null;
+}
+
+function setPersistentCachedUrl(cacheKey, url) {
+  if (!isBrowser) return;
+  const cache = readPersistentCache();
+
+  if (!url) {
+    if (cache[cacheKey]) {
+      delete cache[cacheKey];
+      writePersistentCache(cache);
+    }
+    return;
+  }
+
+  cache[cacheKey] = {
+    url,
+    expiresAt: Date.now() + (IMAGE_CONFIG.cacheDuration || 0)
+  };
+  writePersistentCache(cache);
+}
 
 /**
  * Get the best available image URL for a machine
@@ -29,22 +97,31 @@ export async function getImageUrl(machine, size = 'large') {
     return imageUrlCache.get(cacheKey);
   }
   
+  const persistedUrl = getPersistentCachedUrl(cacheKey);
+  if (persistedUrl) {
+    imageUrlCache.set(cacheKey, persistedUrl);
+    return persistedUrl;
+  }
+
   try {
     // Try to get from our local storage first
     const localUrl = await getLocalImageUrl(machine.opdb_id, size);
     if (localUrl) {
       imageUrlCache.set(cacheKey, localUrl);
+      setPersistentCachedUrl(cacheKey, localUrl);
       return localUrl;
     }
     
     // OPDB fallback disabled for testing to avoid overusing their servers
     // Only return Firebase images during testing
     imageUrlCache.set(cacheKey, null);
+    setPersistentCachedUrl(cacheKey, null);
     return null;
   } catch (error) {
     // Failed to resolve image URL - will use fallback
     // OPDB fallback disabled for testing
     imageUrlCache.set(cacheKey, null);
+    setPersistentCachedUrl(cacheKey, null);
     return null;
   }
 }
