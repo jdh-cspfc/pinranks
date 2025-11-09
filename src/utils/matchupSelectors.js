@@ -1,5 +1,5 @@
 // Import and re-export getFilterGroup from shared utilities
-import { getFilterGroup } from './filterUtils.js';
+import { getFilterGroup, getMachineFilterGroup } from './filterUtils.js';
 export { getFilterGroup };
 
 // Blocked manufacturers list
@@ -78,7 +78,10 @@ export const filterMachinesByPreferences = (machinesData, filter, user, userPref
 
   // Apply filter
   if (!(filter.length === 1 && filter[0] === 'All')) {
-    filteredMachines = filteredMachines.filter(m => filter.includes(getFilterGroup(m.display)));
+    const cache = new Map();
+    filteredMachines = filteredMachines.filter(m => 
+      filter.includes(getMachineFilterGroup(m, machinesData, cache))
+    );
   }
 
   // Filter out machines the user has marked as "haven't played"

@@ -15,6 +15,39 @@ export const getFilterGroup = (display) => {
 };
 
 /**
+ * Determine the best-fit filter group for a machine.
+ * Falls back to other variants in the same machine group when display data is missing.
+ * @param {Object} machine - Machine object with opdb_id/display
+ * @param {Array} machines - Full machines dataset for fallback lookups
+ * @param {Map} cache - Cache keyed by groupId to avoid repeated scans
+ * @returns {string|null} - Effective filter group or null if unknown
+ */
+export const getMachineFilterGroup = (machine, machines, cache = new Map()) => {
+  if (!machine) return null;
+
+  const directGroup = getFilterGroup(machine.display);
+  if (directGroup) {
+    return directGroup;
+  }
+
+  const groupId = machine.opdb_id?.split?.('-')?.[0];
+  if (!groupId) return null;
+
+  if (cache.has(groupId)) {
+    return cache.get(groupId);
+  }
+
+  const fallbackVariant = machines?.find?.((candidate) => {
+    if (!candidate?.opdb_id?.startsWith?.(groupId)) return false;
+    return !!getFilterGroup(candidate.display);
+  }) || null;
+
+  const fallbackGroup = fallbackVariant ? getFilterGroup(fallbackVariant.display) : null;
+  cache.set(groupId, fallbackGroup);
+  return fallbackGroup;
+};
+
+/**
  * Filter machines by their filter groups
  * @param {Array} machines - Array of machine objects
  * @param {Array} filterGroups - Array of filter group values to include
@@ -22,8 +55,9 @@ export const getFilterGroup = (display) => {
  */
 export const filterMachinesByGroup = (machines, filterGroups) => {
   if (filterGroups.includes('All')) return machines;
+  const cache = new Map();
   return machines.filter(machine => 
-    filterGroups.includes(getFilterGroup(machine.display))
+    filterGroups.includes(getMachineFilterGroup(machine, machines, cache))
   );
 };
 
@@ -36,8 +70,9 @@ export const filterMachinesByGroup = (machines, filterGroups) => {
 export const filterMachinesByPriority = (machines, priority) => {
   if (priority === 'all') return machines;
   
+  const cache = new Map();
   return machines.filter(machine => {
-    const group = getFilterGroup(machine.display);
+    const group = getMachineFilterGroup(machine, machines, cache);
     if (priority === 'modern') {
       return MODERN_FILTERS.includes(group);
     }
