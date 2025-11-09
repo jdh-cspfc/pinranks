@@ -113,6 +113,9 @@ export const useMatchupActions = (appData, matchup, setMatchup, filter, fetchMat
         // Store the original machine and matchup state for undo
         const originalMachine = { ...machine };
         const originalMatchup = { ...matchup, machines: [...matchup.machines] };
+        const groupName =
+          originalMatchup.groups?.find(g => g.opdb_id === groupId)?.name ||
+          originalMachine.name;
         
         // Replace the machine immediately using the optimistic blocked machines list
         const result = await replaceMachine(machineIndex, updatedBlockedMachines);
@@ -141,7 +144,7 @@ export const useMatchupActions = (appData, matchup, setMatchup, filter, fetchMat
               clearMessage();
               
               // Show a brief confirmation
-              showMessage({ text: `Restored ${originalMachine.name}` });
+              showMessage({ text: `Restored ${groupName}` });
               
               logger.info('undo', `Successfully restored ${originalMachine.name}`);
             } catch (err) {
@@ -153,7 +156,7 @@ export const useMatchupActions = (appData, matchup, setMatchup, filter, fetchMat
           
           // Show message with undo button
           showMessage({
-            text: `${originalMachine.name} added to Haven't Played list`,
+            text: `${groupName} added to Haven't Played list`,
             onUndo: handleUndo
           });
           
