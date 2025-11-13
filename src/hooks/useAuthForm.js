@@ -184,6 +184,10 @@ export const useAuthForm = () => {
   // Handle Google sign-in
   const handleGoogleSignIn = async () => {
     try {
+      // Log auth domain for debugging
+      if (typeof window !== 'undefined' && window.location.hostname !== 'localhost') {
+        console.log('Attempting Google sign-in from:', window.location.hostname);
+      }
       const result = await signInWithPopup(auth, googleProvider);
       const user = result.user;
       
@@ -225,6 +229,11 @@ export const useAuthForm = () => {
         handleSuccess('Successfully signed in with Google!', { action: 'google_signin' });
       }
     } catch (err) {
+      // Log full error for debugging
+      console.error('Google sign-in error:', err);
+      console.error('Error code:', err.code);
+      console.error('Error message:', err.message);
+      
       // Don't show error if user closed, cancelled, or denied permission
       if (err.code === 'auth/popup-closed-by-user' || 
           err.code === 'auth/cancelled-popup-request' || 

@@ -251,6 +251,12 @@ class ErrorService {
         case 'auth/network-request-failed':
           userMessage = 'Network error. Please check your connection.';
           break;
+        case 'auth/unauthorized-domain':
+          userMessage = 'This domain is not authorized for authentication. Please contact support.';
+          break;
+        case 'auth/operation-not-allowed':
+          userMessage = 'This sign-in method is not enabled. Please contact support.';
+          break;
         case 'permission-denied':
           userMessage = 'You do not have permission to perform this action.';
           break;
