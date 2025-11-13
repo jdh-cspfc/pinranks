@@ -29,7 +29,6 @@ export default function RankingsList({
   activeTab, 
   displayedCount, 
   newItemsLoaded, 
-  hasMoreItems, 
   isLoadingMore, 
   loadingRef 
 }) {
@@ -85,6 +84,10 @@ export default function RankingsList({
 
   const filteredRankings = getFilteredRankings();
   const displayedRankings = filteredRankings.slice(0, displayedCount);
+  
+  // Calculate hasMoreItems based on the filtered list, not the total rankings
+  // This prevents showing the loading spinner when all filtered items are already displayed
+  const hasMoreFilteredItems = displayedCount < filteredRankings.length;
 
   return (
     <>
@@ -108,7 +111,7 @@ export default function RankingsList({
           );
         })}
         
-        {hasMoreItems && (
+        {hasMoreFilteredItems && (
           <div 
             ref={loadingRef}
             className={`transition-opacity duration-300 ${isLoadingMore ? 'opacity-100' : 'opacity-50'}`}
