@@ -4,16 +4,24 @@ import { getFirestore } from 'firebase/firestore'
 import { getStorage } from 'firebase/storage'
 import errorService from './services/errorService'
 
-// Use Firebase domain for localhost, custom domain for production
+// Use custom domain for authDomain when on pinranks.com (Firebase Hosting required)
+// Falls back to Firebase domain for localhost or if custom domain not yet configured
 const isLocalhost = typeof window !== 'undefined' && (
   window.location.hostname === 'localhost' ||
   window.location.hostname === '127.0.0.1' ||
   window.location.hostname.startsWith('192.168.')
 )
 
+const isCustomDomain = typeof window !== 'undefined' && (
+  window.location.hostname === 'pinranks.com' ||
+  window.location.hostname === 'www.pinranks.com'
+)
+
 const firebaseConfig = {
   apiKey: "AIzaSyCWzLfjymwB9BOfbHH9iePqjOUD2l_KVPY",
-  authDomain: isLocalhost ? "pinranks-efabb.firebaseapp.com" : "pinranks.com",
+  authDomain: isLocalhost 
+    ? "pinranks-efabb.firebaseapp.com" 
+    : (isCustomDomain ? "pinranks.com" : "pinranks-efabb.firebaseapp.com"),
   projectId: "pinranks-efabb",
   storageBucket: "pinranks-efabb.firebasestorage.app",
   messagingSenderId: "345340805592",

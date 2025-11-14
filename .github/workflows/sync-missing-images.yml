@@ -1,0 +1,37 @@
+name: Sync Missing Images
+
+on:
+  schedule:
+    # Run daily at 4 AM UTC (after OPDB sync at 3 AM)
+    - cron: '0 4 * * *'
+  workflow_dispatch: # Allow manual triggering
+
+jobs:
+  sync-images:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Check and download missing images
+        run: node scripts/downloadImages.js --check-missing --auto-download
+        env:
+          # These are read from machines.json URL, but can be overridden if needed
+          FIREBASE_STORAGE_BUCKET: ${{ secrets.FIREBASE_STORAGE_BUCKET || 'pinranks-efabb.firebasestorage.app' }}
+      
+      - name: Summary
+        if: always()
+        run: |
+          echo "✅ Image sync workflow completed"
+          echo "Check the logs above for details on what was downloaded"
+
