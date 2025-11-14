@@ -1,0 +1,38 @@
+name: Sync OPDB Data
+
+on:
+  schedule:
+    # Run daily at 3 AM UTC (low traffic time)
+    - cron: '0 3 * * *'
+  workflow_dispatch: # Allow manual triggering
+
+jobs:
+  sync-opdb-data:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Sync OPDB data to Firebase Storage
+        run: node scripts/syncOPDBData.js
+        env:
+          OPDB_API_TOKEN: ${{ secrets.OPDB_API_TOKEN }}
+          FIREBASE_STORAGE_BUCKET: ${{ secrets.FIREBASE_STORAGE_BUCKET || 'pinranks-efabb.firebasestorage.app' }}
+          FIREBASE_SERVICE_ACCOUNT_KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_KEY }}
+      
+      - name: Summary
+        if: always()
+        run: |
+          echo "✅ OPDB data sync workflow completed"
+          echo "Check the logs above for details on what was synchronized"
+

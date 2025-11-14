@@ -486,24 +486,6 @@ async function syncOPDBDataCore() {
   }
 }
 
-/**
- * Scheduled function to fetch OPDB data and upload to Firebase Storage
- * Runs daily at 3 AM UTC (low traffic time)
- */
-exports.syncOPDBData = functions.scheduler.onSchedule({
-  schedule: "0 3 * * *",
-  timeZone: "UTC",
-  secrets: ["OPDB_API_TOKEN"],
-}, async (event) => {
-  try {
-    await syncOPDBDataCore();
-    return null;
-  } catch (error) {
-    // Don't throw - allow the function to complete and log the error
-    logger.error("opdb-sync", `Scheduled sync failed: ${error.message}`);
-    return null;
-  }
-});
 
 /**
  * HTTP function to manually trigger OPDB data synchronization
