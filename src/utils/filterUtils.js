@@ -4,6 +4,7 @@
  */
 
 import { DISPLAY_TO_FILTER_MAP, MODERN_FILTERS } from '../constants/filters.js';
+import { MACHINE_FILTER_OVERRIDES } from '../constants/machineFilterOverrides.js';
 
 /**
  * Get the filter group for a given display type
@@ -16,6 +17,7 @@ export const getFilterGroup = (display) => {
 
 /**
  * Determine the best-fit filter group for a machine.
+ * Checks override map first, then falls back to display type mapping.
  * Falls back to other variants in the same machine group when display data is missing.
  * @param {Object} machine - Machine object with opdb_id/display
  * @param {Array} machines - Full machines dataset for fallback lookups
@@ -25,12 +27,23 @@ export const getFilterGroup = (display) => {
 export const getMachineFilterGroup = (machine, machines, cache = new Map()) => {
   if (!machine) return null;
 
+  const opdbId = machine.opdb_id;
+  const groupId = opdbId?.split?.('-')?.[0];
+
+  // Check override map first (full opdb_id takes precedence over groupId)
+  if (opdbId && MACHINE_FILTER_OVERRIDES[opdbId]) {
+    return MACHINE_FILTER_OVERRIDES[opdbId];
+  }
+  if (groupId && MACHINE_FILTER_OVERRIDES[groupId]) {
+    return MACHINE_FILTER_OVERRIDES[groupId];
+  }
+
+  // Fall back to display type mapping
   const directGroup = getFilterGroup(machine.display);
   if (directGroup) {
     return directGroup;
   }
 
-  const groupId = machine.opdb_id?.split?.('-')?.[0];
   if (!groupId) return null;
 
   if (cache.has(groupId)) {
@@ -84,10 +97,13 @@ export const filterMachinesByPriority = (machines, priority) => {
  * Check if a machine matches any of the given filter groups
  * @param {Object} machine - Machine object with display property
  * @param {Array} filterGroups - Array of filter group values
+ * @param {Array} machines - Full machines dataset for fallback lookups (optional)
  * @returns {boolean} - True if machine matches any filter group
  */
-export const machineMatchesFilter = (machine, filterGroups) => {
+export const machineMatchesFilter = (machine, filterGroups, machines = null) => {
   if (filterGroups.includes('All')) return true;
-  const machineGroup = getFilterGroup(machine.display);
+  const machineGroup = machines 
+    ? getMachineFilterGroup(machine, machines)
+    : getFilterGroup(machine.display);
   return filterGroups.includes(machineGroup);
 };

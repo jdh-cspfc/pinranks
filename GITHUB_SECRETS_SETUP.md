@@ -22,7 +22,7 @@ You need to set up these secrets in your GitHub repository:
 ### Step 2: Add OPDB_API_TOKEN
 
 1. **Name**: `OPDB_API_TOKEN`
-2. **Secret**: `Esby2Ipvnxo5bkC6H1HjwC68XdLM5CTMUoGy4YE1pJ72wusuUV3rPBb0b1TZ`
+2. **Secret**: `pkpNe8sgDrgqXJcIf348cHi0xA1cAMBCi0w5spsj6LrQJBbah8ebgXEL0muP`
 3. Click **Add secret**
 
 ### Step 3: Create Firebase Service Account Key
