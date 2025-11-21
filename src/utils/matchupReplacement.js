@@ -11,6 +11,26 @@ const findFallbackMachine = (machinesData, groupsData, otherGroupId, user, userP
   const fallbackMachines = machinesData.filter(m => {
     // Still exclude blocked manufacturers
     if (BLOCKED_MANUFACTURERS.includes(m.manufacturer?.name)) return false;
+
+    // Exclude conversion kits so their images are never surfaced,
+    // even as a last-resort fallback choice
+    const candidateLists = [
+      Array.isArray(m.features) ? m.features : null,
+      Array.isArray(m.tags) ? m.tags : null,
+      Array.isArray(m.attributes) ? m.attributes : null,
+      Array.isArray(m.keywords) ? m.keywords : null,
+    ].filter(Boolean);
+
+    if (candidateLists.length > 0) {
+      const combined = candidateLists
+        .flat()
+        .join(' ')
+        .toLowerCase();
+
+      if (combined.includes('conversion kit')) {
+        return false;
+      }
+    }
     
     // Still exclude machines the user has marked as "haven't played"
     if (user && userPreferences && userPreferences.blockedMachines && userPreferences.blockedMachines.length > 0) {

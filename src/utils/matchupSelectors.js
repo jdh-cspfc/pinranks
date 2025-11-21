@@ -10,10 +10,35 @@ export const BLOCKED_MANUFACTURERS = [
   "I.D.I."
 ];
 
+// Helper to determine if a machine is a conversion kit
+// We never want to show images for these machines in matchups
+const isConversionKit = (machine) => {
+  if (!machine) return false;
+
+  // OPDB-style data typically stores descriptors in arrays like `features`
+  // but we defensively check a few common fields.
+  const candidateLists = [
+    Array.isArray(machine.features) ? machine.features : null,
+    Array.isArray(machine.tags) ? machine.tags : null,
+    Array.isArray(machine.attributes) ? machine.attributes : null,
+    Array.isArray(machine.keywords) ? machine.keywords : null,
+  ].filter(Boolean);
+
+  if (candidateLists.length === 0) return false;
+
+  const combined = candidateLists
+    .flat()
+    .join(' ')
+    .toLowerCase();
+
+  return combined.includes('conversion kit');
+};
+
 // Helper to select best machine for a group
 export function selectBestMachineForGroup(groupId, machinesData, groupName) {
+  // Exclude conversion kits entirely so their images are never used
   const variants = machinesData.filter(machine =>
-    machine.opdb_id.startsWith(groupId)
+    machine.opdb_id.startsWith(groupId) && !isConversionKit(machine)
   );
 
   if (variants.length === 0) return null;
@@ -73,7 +98,9 @@ export function selectBestMachineForGroup(groupId, machinesData, groupName) {
 // Helper to filter machines based on blocked manufacturers and user preferences
 export const filterMachinesByPreferences = (machinesData, filter, user, userPreferences) => {
   let filteredMachines = machinesData.filter(m =>
-    !BLOCKED_MANUFACTURERS.includes(m.manufacturer?.name)
+    !BLOCKED_MANUFACTURERS.includes(m.manufacturer?.name) &&
+    // Globally exclude conversion kits so they never appear in matchups/images
+    !isConversionKit(m)
   );
 
   // Apply filter
