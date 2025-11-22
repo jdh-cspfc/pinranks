@@ -25,5 +25,6 @@ export const MACHINE_FILTER_OVERRIDES = {
     'G5Kvx-MQdpl': 'Solid State',   //Baby Pac-Man
     'G4OKd-Mb51r': 'Solid State',   //Granny and the Gators
     'GrJ07-MjB7X': 'Solid State',   //Mac Attack
+    'Gr3yE-MLb3K': 'Solid State',   //Flip-VI
 };
 

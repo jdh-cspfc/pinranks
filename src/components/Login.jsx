@@ -42,7 +42,7 @@ export default function Login() {
         <div className="text-center">
           <p className="text-sm text-gray-600 dark:text-gray-400">Log in to</p>
           <div className="flex items-center justify-center gap-2 mt-1 -ml-3">
-            <img src="/favicon.svg" alt="pinranks logo" className="h-8 w-8" />
+            <img src="/favicon.svg" alt="" role="presentation" className="h-8 w-8" />
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white tracking-tight">pinranks</h1>
           </div>
         </div>
@@ -51,7 +51,7 @@ export default function Login() {
         <button
           type="button"
           onClick={handleGoogleSignIn}
-          className="w-full flex items-center justify-center px-4 py-3 bg-gray-800 text-white rounded-lg hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
+          className="w-full flex items-center justify-center px-4 py-3 bg-gray-800 text-white rounded-lg text-sm font-semibold hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
         >
           <svg className="w-5 h-5 mr-3" viewBox="0 0 24 24">
             <path
@@ -112,7 +112,7 @@ export default function Login() {
             <RegisterForm formData={formData} updateFormData={updateFormData} />
           )}
 
-          <button className="w-full bg-gray-200 text-gray-900 py-3 rounded-lg hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2" type="submit">
+          <button className="w-full bg-gray-200 text-gray-900 py-3 rounded-lg text-sm font-semibold hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2" type="submit">
             {isLogin ? 'Log in' : 'Register'}
           </button>
 

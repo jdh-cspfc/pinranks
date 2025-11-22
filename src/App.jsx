@@ -7,7 +7,7 @@ import { signOut } from 'firebase/auth'
 import { auth } from './firebase'
 import ErrorBoundary from './components/ErrorBoundary'
 import { useErrorHandler } from './hooks/useErrorHandler'
-import LoggingControls from './components/LoggingControls'
+// import LoggingControls from './components/LoggingControls' // Logging controls - ready to re-enable
 
 export default function App() {
   const rawAppData = useAppData()
@@ -65,9 +65,10 @@ export default function App() {
         >
           {mainContent}
         </AppLayout>
-        <div className="hidden md:block">
+        {/* Logging controls - commented out but ready to re-enable */}
+        {/* <div className="hidden md:block">
           <LoggingControls />
-        </div>
+        </div> */}
       </DarkModeProvider>
     </ErrorBoundary>
   )
