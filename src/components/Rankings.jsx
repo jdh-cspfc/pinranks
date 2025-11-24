@@ -19,7 +19,8 @@ export default function Rankings({ appData }) {
     machines, 
     groups, 
     isLoading: loading, 
-    isUserDataLoading: rankingsLoading
+    isUserDataLoading: rankingsLoading,
+    refreshUserData
   } = appData;
   
   // Calculate filtered rankings count to pass to infinite scroll hook
@@ -54,6 +55,14 @@ export default function Rankings({ appData }) {
     loadingRef, 
     resetDisplayCount 
   } = useInfiniteScroll(filteredRankingsCount);
+
+  // Refresh rankings when component mounts to ensure we have the latest data
+  // This is especially important after voting, as rankings are updated in Firestore
+  useEffect(() => {
+    if (user && refreshUserData) {
+      refreshUserData();
+    }
+  }, [user, refreshUserData]);
 
   // Reset displayed count when filter changes
   useEffect(() => {
