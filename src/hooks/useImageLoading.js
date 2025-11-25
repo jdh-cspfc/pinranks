@@ -67,7 +67,35 @@ export const useImageLoading = (matchup) => {
           if (leftChanged && leftHasImage) {
             promises.push(
               getImageUrl(validMachines[0], 'large')
-                .then(url => ({ side: 'left', url, success: true }))
+                .then((url) => {
+                  if (url) {
+                    // Check if image is already loaded in browser cache
+                    return new Promise((resolve) => {
+                      const img = new Image();
+                      let resolved = false;
+                      
+                      const doResolve = () => {
+                        if (!resolved) {
+                          resolved = true;
+                          resolve({ side: 'left', url, success: true });
+                        }
+                      };
+                      
+                      img.onload = doResolve;
+                      img.onerror = doResolve; // Still use URL even if load fails
+                      img.src = url;
+                      
+                      // Check if image is already complete (cached) after giving browser a chance
+                      // This happens when the image was preloaded
+                      setTimeout(() => {
+                        if (img.complete && img.naturalWidth > 0 && !resolved) {
+                          doResolve();
+                        }
+                      }, 0);
+                    });
+                  }
+                  return { side: 'left', url: null, success: false };
+                })
                 .catch(() => ({ side: 'left', url: null, success: false }))
             );
           }
@@ -75,7 +103,35 @@ export const useImageLoading = (matchup) => {
           if (rightChanged && rightHasImage) {
             promises.push(
               getImageUrl(validMachines[1], 'large')
-                .then(url => ({ side: 'right', url, success: true }))
+                .then((url) => {
+                  if (url) {
+                    // Check if image is already loaded in browser cache
+                    return new Promise((resolve) => {
+                      const img = new Image();
+                      let resolved = false;
+                      
+                      const doResolve = () => {
+                        if (!resolved) {
+                          resolved = true;
+                          resolve({ side: 'right', url, success: true });
+                        }
+                      };
+                      
+                      img.onload = doResolve;
+                      img.onerror = doResolve; // Still use URL even if load fails
+                      img.src = url;
+                      
+                      // Check if image is already complete (cached) after giving browser a chance
+                      // This happens when the image was preloaded
+                      setTimeout(() => {
+                        if (img.complete && img.naturalWidth > 0 && !resolved) {
+                          doResolve();
+                        }
+                      }, 0);
+                    });
+                  }
+                  return { side: 'right', url: null, success: false };
+                })
                 .catch(() => ({ side: 'right', url: null, success: false }))
             );
           }

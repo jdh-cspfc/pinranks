@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import TopBar from '../TopBar';
 import MachineImage from './MachineImage';
 import HaventPlayedButton from './HaventPlayedButton';
+import FanfareCard from './FanfareCard';
 
 // Component to handle individual machine card display
 export default function MachineCard({ 
@@ -14,8 +15,11 @@ export default function MachineCard({
   handleVote, 
   handleHaventPlayed, 
   fetchMatchup,
-  isMachineBlocked
+  isMachineBlocked,
+  fanfareData,
+  skipFanfare
 }) {
+  const [fanfareClicked, setFanfareClicked] = useState(false);
   const isClicked = clickedCard === index;
   const groupId = machine.opdb_id.split('-')[0];
   const group = matchup.groups.find(g => g.opdb_id === groupId);
@@ -28,16 +32,36 @@ export default function MachineCard({
   
   const imageUrl = index === 0 ? imageStates.left.url : imageStates.right.url;
   const imageState = index === 0 ? imageStates.left : imageStates.right;
+  
+  // Determine if this card should show fanfare
+  const isWinner = fanfareData?.winner?.groupId === groupId;
+  const isLoser = fanfareData?.loser?.groupId === groupId;
+  const showFanfare = fanfareData && (isWinner || isLoser);
+  const rankingData = showFanfare 
+    ? (isWinner ? fanfareData.winner : fanfareData.loser)
+    : null;
 
   return (
     <div
       key={`${groupId}-${index}-${machine.opdb_id}`}
-      className={`mobile-card sm:h-[70vh] border p-3 sm:p-4 rounded shadow bg-white dark:bg-gray-800 text-center border-gray-200 dark:border-gray-700 items-center overflow-auto cursor-pointer sm:hover:shadow-lg sm:hover:bg-blue-50 dark:sm:hover:bg-gray-700 transition-all duration-100 ease-out relative ${
-        isClicked 
-          ? 'scale-[0.98] sm:bg-blue-50 dark:sm:hover:bg-gray-600' 
-          : 'scale-100'
+      className={`mobile-card sm:h-[70vh] border p-3 sm:p-4 rounded shadow bg-white dark:bg-gray-800 text-center border-gray-200 dark:border-gray-700 items-center overflow-auto relative ${
+        isClicked || fanfareClicked
+          ? 'sm:bg-blue-50 dark:sm:hover:bg-gray-600' 
+          : ''
+      } ${
+        showFanfare 
+          ? 'pointer-events-none' 
+          : 'cursor-pointer sm:hover:shadow-lg sm:hover:bg-blue-50 dark:sm:hover:bg-gray-700'
       }`}
+      style={{
+        transformOrigin: 'center center',
+        transform: isClicked || fanfareClicked ? 'scale(0.98)' : 'scale(1)',
+        transition: 'transform 0.3s ease-out, background-color 0.1s ease-out'
+      }}
       onClick={() => {
+        // Prevent clicks during fanfare
+        if (showFanfare) return;
+        
         if (TopBar.justClosedMenuRef && TopBar.justClosedMenuRef.current) {
           TopBar.justClosedMenuRef.current = false;
           return;
@@ -45,6 +69,21 @@ export default function MachineCard({
         handleVote(index);
       }}
     >
+      {/* Fanfare Overlay */}
+      {showFanfare && rankingData && (
+        <FanfareCard 
+          ranking={rankingData}
+          isVisible={showFanfare}
+          onSkip={() => {
+            setFanfareClicked(true);
+            setTimeout(() => {
+              setFanfareClicked(false);
+            }, 150);
+            skipFanfare();
+          }}
+        />
+      )}
+      
       {/* Haven't Played Button */}
       <HaventPlayedButton
         index={index}

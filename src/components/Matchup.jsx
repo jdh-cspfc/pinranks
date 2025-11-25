@@ -9,7 +9,7 @@ import FilterButtons from './Matchup/FilterButtons';
 import MachineCard from './Matchup/MachineCard';
 
 export default function Matchup({ appData }) {
-  const { user, userPreferences, isUserDataLoading, machines, groups, isStaticDataLoading } = appData;
+  const { user, userPreferences, userRankings, isUserDataLoading, machines, groups, isStaticDataLoading } = appData;
   const userPreferencesLoaded = !isUserDataLoading;
   const staticDataLoaded = !isStaticDataLoading && machines && groups;
   const [filter, setFilter] = useState(['All']);
@@ -37,7 +37,7 @@ export default function Matchup({ appData }) {
   const handleHaventPlayed = createHandleHaventPlayed();
   
   const { imageStates, bothImagesReady } = useImageLoading(matchup);
-  const { clickedCard, handleVote, voteError, voteSuccess, clearVoteMessages } = useVoting(user, matchup, fetchMatchup);
+  const { clickedCard, handleVote, fanfareData, skipFanfare, voteError, voteSuccess, clearVoteMessages, updateFilterForNextMatchup } = useVoting(user, matchup, fetchMatchup, userRankings, appData, filter, setMatchup);
 
   // Run on first load - but only after user preferences AND static data are loaded
   useEffect(() => {
@@ -53,12 +53,21 @@ export default function Matchup({ appData }) {
     const filterChanged = JSON.stringify(filter) !== JSON.stringify(previousFilter.current);
     if (hasInitialized.current && !isFetching.current && filterChanged) {
       previousFilter.current = [...filter];
-      isFetching.current = true;
-      fetchMatchupRef.current(true).finally(() => {
-        isFetching.current = false;
-      }); // Pass true to indicate this is a filter change
+      
+      // If fanfare is active, update the next matchup to use the new filter instead of fetching immediately
+      if (fanfareData) {
+        if (updateFilterForNextMatchup) {
+          updateFilterForNextMatchup(filter);
+        }
+      } else {
+        // No fanfare active, fetch immediately
+        isFetching.current = true;
+        fetchMatchupRef.current(true).finally(() => {
+          isFetching.current = false;
+        }); // Pass true to indicate this is a filter change
+      }
     }
-  }, [filter]); // Only depend on filter, not other state
+  }, [filter, fanfareData, updateFilterForNextMatchup]); // Include fanfareData and updateFilterForNextMatchup
 
   if (error) {
     return (
@@ -126,6 +135,8 @@ export default function Matchup({ appData }) {
             handleHaventPlayed={handleHaventPlayed}
             fetchMatchup={fetchMatchup}
             isMachineBlocked={userPreferences.isMachineBlocked}
+            fanfareData={fanfareData}
+            skipFanfare={skipFanfare}
           />
         ))}
       </div>
