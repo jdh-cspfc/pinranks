@@ -137,16 +137,16 @@ export const useMatchupActions = (appData, matchup, setMatchup, filter, fetchMat
                 pendingUndoActionsRef.current.delete(groupId);
               }
               
-              // Restore the original matchup state
-              setMatchup(originalMatchup);
+              // Remove the machine from the blocked list
+              await removeBlockedMachine(groupId);
               
               // Clear the confirmation message
               clearMessage();
               
               // Show a brief confirmation
-              showMessage({ text: `Restored ${groupName}` });
+              showMessage({ text: `${groupName} removed from Haven't Played list` });
               
-              logger.info('undo', `Successfully restored ${originalMachine.name}`);
+              logger.info('undo', `Successfully removed ${originalMachine.name} from blocked list`);
             } catch (err) {
               logger.error('undo', `Failed to undo block of ${originalMachine.name}: ${err.message}`);
               console.error('Undo failed:', err);
