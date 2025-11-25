@@ -280,6 +280,12 @@ export default function Profile({ appData }) {
               const filteredMachines = blockedMachines.filter(groupId => {
                 const group = groups?.find(g => g.opdb_id === groupId);
                 return group?.name?.toLowerCase().includes(searchTerm.toLowerCase());
+              }).sort((groupIdA, groupIdB) => {
+                const groupA = groups?.find(g => g.opdb_id === groupIdA);
+                const groupB = groups?.find(g => g.opdb_id === groupIdB);
+                const nameA = groupA?.name || `Machine ${groupIdA}`;
+                const nameB = groupB?.name || `Machine ${groupIdB}`;
+                return nameA.localeCompare(nameB, undefined, { sensitivity: 'base' });
               });
 
               if (filteredMachines.length === 0 && searchTerm) {

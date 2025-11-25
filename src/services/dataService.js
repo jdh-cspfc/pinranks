@@ -169,10 +169,24 @@ export class UserDataService {
     // Use arrayUnion to atomically add to the array, preventing race conditions
     try {
       const userPrefsRef = doc(db, 'userPreferences', userId);
-      await updateDoc(userPrefsRef, {
-        blockedMachines: arrayUnion(groupId),
-        lastUpdated: new Date().toISOString()
-      });
+      
+      // Check if document exists first
+      const userPrefsSnap = await getDoc(userPrefsRef);
+      
+      if (!userPrefsSnap.exists()) {
+        // Document doesn't exist, create it with the blocked machine
+        logger.debug('firebase', `Creating userPreferences document for user ${userId}`);
+        await setDoc(userPrefsRef, {
+          blockedMachines: [groupId],
+          lastUpdated: new Date().toISOString()
+        });
+      } else {
+        // Document exists, use updateDoc with arrayUnion
+        await updateDoc(userPrefsRef, {
+          blockedMachines: arrayUnion(groupId),
+          lastUpdated: new Date().toISOString()
+        });
+      }
       
       // Fetch the updated value from Firebase to get the actual state
       // This ensures we return the true value even if other concurrent writes happened
