@@ -7,6 +7,7 @@ import { useErrorHandler } from '../hooks/useErrorHandler';
 import { useConfirmationMessage } from '../hooks/useConfirmationMessage';
 import Card from './Card';
 import { Message } from './ErrorDisplay';
+import ToastNotification from './ToastNotification';
 import logger from '../utils/logger';
 
 export default function Profile({ appData }) {
@@ -171,24 +172,7 @@ export default function Profile({ appData }) {
       />
       
       {/* Toast Notification with Undo */}
-      {confirmationMessage && (
-        <div className="fixed bottom-4 left-4 right-4 sm:left-auto sm:right-4 sm:max-w-md z-50 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 px-4 py-3 rounded-lg shadow-lg">
-          <div className={`flex items-center ${confirmationMessage.onUndo ? 'justify-between gap-4' : ''}`}>
-            <div className="flex items-center gap-2.5 flex-1 min-w-0">
-              <div className="w-2 h-2 bg-green-500 rounded-full flex-shrink-0"></div>
-              <div className="text-sm break-words" style={{ overflowWrap: 'anywhere', wordBreak: 'break-word' }}>{confirmationMessage.text || confirmationMessage}</div>
-            </div>
-            {confirmationMessage.onUndo && (
-              <button 
-                onClick={confirmationMessage.onUndo}
-                className="text-sm font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 whitespace-nowrap flex-shrink-0 transition-colors"
-              >
-                Undo
-              </button>
-            )}
-          </div>
-        </div>
-      )}
+      <ToastNotification message={confirmationMessage} />
       
       {/* Dark Mode Toggle */}
       <div className="flex items-center justify-center gap-4 mb-6">

@@ -1,9 +1,9 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useInfiniteScroll } from '../hooks/useInfiniteScroll';
+import { useRankingFilter } from '../hooks/useRankingFilter';
 import RankingsFilters from './Rankings/RankingsFilters';
 import RankingsList from './Rankings/RankingsList';
 import Card from './Card';
-import { getFilterGroup } from '../utils/filterUtils';
 
 /**
  * Main Rankings component - now much simpler and focused
@@ -23,30 +23,8 @@ export default function Rankings({ appData }) {
     refreshUserData
   } = appData;
   
-  // Calculate filtered rankings count to pass to infinite scroll hook
-  // This ensures the hook knows the correct total based on the active filter
-  const filteredRankingsCount = useMemo(() => {
-    if (!rankings || !machines || !groups) return 0;
-    
-    // Helper to get machine info (same logic as RankingsList)
-    const getMachineInfo = (groupId) => {
-      const group = groups.find(g => g.opdb_id === groupId);
-      if (!group) return null;
-      const machine = machines.find(m => m.opdb_id.startsWith(groupId + '-'));
-      if (!machine) return null;
-      return { display: machine.display };
-    };
-    
-    return rankings.filter(item => {
-      const groupId = item.groupId || item.machineId;
-      const info = getMachineInfo(groupId);
-      if (!info) return false;
-      
-      // Filter by display type if not "All"
-      if (activeTab === 'All') return true;
-      return getFilterGroup(info.display) === activeTab;
-    }).length;
-  }, [rankings, machines, groups, activeTab]);
+  // Use centralized ranking filter hook
+  const { filteredCount: filteredRankingsCount } = useRankingFilter(rankings, machines, groups, activeTab);
   
   const { 
     displayedCount, 

@@ -1,5 +1,5 @@
 import React from 'react';
-import { getFilterGroup } from '../../utils/filterUtils';
+import { useRankingFilter } from '../../hooks/useRankingFilter';
 
 /**
  * Loading spinner component with configurable size
@@ -32,57 +32,9 @@ export default function RankingsList({
   isLoadingMore, 
   loadingRef 
 }) {
-  // Helper function to get machine information from group ID
-  // Rankings are stored at the group level, so we need to find a representative machine from the group
-  const getMachineInfo = (groupId) => {
-    if (!machines || !groups) return null;
-    
-    // Find the group
-    const group = groups.find(g => g.opdb_id === groupId);
-    if (!group) return null;
-    
-    // Find any machine in this group to get metadata (manufacturer, year, display type)
-    const machine = machines.find(m => m.opdb_id.startsWith(groupId + '-'));
-    
-    const name = group?.name || machine?.name || 'Unknown';
-    const year = machine?.manufacture_date ? machine.manufacture_date.slice(0, 4) : 'Unknown';
-    const manufacturer = machine?.manufacturer?.name || 'Unknown';
-    const display = machine?.display || null;
-    
-    return { name, year, manufacturer, display };
-  };
-
-  // Filter and sort rankings based on active tab
-  const getFilteredRankings = () => {
-    if (!rankings || !machines) return [];
-
-    return rankings
-      .map(item => {
-        // Rankings now use groupId instead of machineId
-        const info = getMachineInfo(item.groupId || item.machineId); // Support both for backward compatibility during migration
-        if (!info) return null;
-        
-        // Get the appropriate score based on activeTab
-        const score = activeTab === 'All' 
-          ? (item.eloObj.all ?? 1200)
-          : (item.eloObj[activeTab] ?? item.eloObj.all ?? 1200);
-        
-        return {
-          ...item,
-          score,
-          info
-        };
-      })
-      .filter(item => {
-        if (!item) return false;
-        // Filter by display type if not "All"
-        if (activeTab === 'All') return true;
-        return getFilterGroup(item.info.display) === activeTab;
-      })
-      .sort((a, b) => b.score - a.score);
-  };
-
-  const filteredRankings = getFilteredRankings();
+  // Use centralized ranking filter hook
+  const { filteredRankings } = useRankingFilter(rankings, machines, groups, activeTab);
+  
   const displayedRankings = filteredRankings.slice(0, displayedCount);
   
   // Calculate hasMoreItems based on the filtered list, not the total rankings
@@ -97,7 +49,8 @@ export default function RankingsList({
       
       <ol className="list-decimal pl-6">
         {displayedRankings.map((item, idx) => {
-          const isNewItem = idx >= displayedCount - 50 && newItemsLoaded;
+          if (!item || !item.info) return null;
+          
           return (
             <li 
               key={item.groupId || item.machineId} 

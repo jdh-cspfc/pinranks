@@ -7,6 +7,8 @@ import { useMatchupActions } from '../hooks/useMatchupActions';
 import { LoadingError, Message } from './ErrorDisplay';
 import FilterButtons from './Matchup/FilterButtons';
 import MachineCard from './Matchup/MachineCard';
+import ToastNotification from './ToastNotification';
+import LoadingState from './LoadingState';
 
 export default function Matchup({ appData }) {
   const { user, userPreferences, userRankings, isUserDataLoading, machines, groups, isStaticDataLoading } = appData;
@@ -80,20 +82,12 @@ export default function Matchup({ appData }) {
 
   // Show loading if user preferences or static data haven't been loaded yet
   if (!userPreferencesLoaded || !staticDataLoaded) {
-    return (
-      <div className="flex justify-center items-center h-64">
-        <div className="text-gray-500">Loading...</div>
-      </div>
-    );
+    return <LoadingState />;
   }
 
   // Show loading if we haven't initialized yet (waiting for first fetch)
   if (!hasInitialized.current) {
-    return (
-      <div className="flex justify-center items-center h-64">
-        <div className="text-gray-500">Loading matchups...</div>
-      </div>
-    );
+    return <LoadingState message="Loading matchups..." />;
   }
 
   // Filter out null machines (only when matchup exists)
@@ -146,24 +140,7 @@ export default function Matchup({ appData }) {
   return (
     <>
       {/* Toast Notification with Undo */}
-      {confirmationMessage && (
-        <div className="fixed bottom-4 left-4 right-4 sm:left-auto sm:right-4 sm:max-w-md z-50 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 px-4 py-3 rounded-lg shadow-lg">
-          <div className={`flex items-center ${confirmationMessage.onUndo ? 'justify-between gap-4' : ''}`}>
-            <div className="flex items-center gap-2.5 flex-1 min-w-0">
-              <div className="w-2 h-2 bg-green-500 rounded-full flex-shrink-0"></div>
-              <div className="text-sm break-words" style={{ overflowWrap: 'anywhere', wordBreak: 'break-word' }}>{confirmationMessage.text || confirmationMessage}</div>
-            </div>
-            {confirmationMessage.onUndo && (
-              <button 
-                onClick={confirmationMessage.onUndo}
-                className="text-sm font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 whitespace-nowrap flex-shrink-0 transition-colors"
-              >
-                Undo
-              </button>
-            )}
-          </div>
-        </div>
-      )}
+      <ToastNotification message={confirmationMessage} />
 
       {/* Filter Buttons - only show when we have a matchup */}
       {matchup && (

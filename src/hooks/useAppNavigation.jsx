@@ -3,6 +3,7 @@ import Login from '../components/Login'
 import Matchup from '../components/Matchup'
 import Profile from '../components/Profile'
 import Rankings from '../components/Rankings'
+import LoadingState from '../components/LoadingState'
 // import Splash from '../components/Splash' // Splash page - ready to re-enable
 
 export const useAppNavigation = () => {
@@ -31,9 +32,7 @@ export const useAppNavigation = () => {
   const getMainContent = (user, hasCheckedAuth, appData) => {
     if (!hasCheckedAuth) {
       // Before auth check, show loading state
-      return <div className="flex justify-center items-center h-64">
-        <div className="text-gray-500">Loading...</div>
-      </div>
+      return <LoadingState />;
     }
     if (!user) {
       // After auth check, user is definitely not logged in
@@ -47,9 +46,7 @@ export const useAppNavigation = () => {
     // User is authenticated, show appropriate content
     // Only render components if appData is available
     if (!appData) {
-      return <div className="flex justify-center items-center h-64">
-        <div className="text-gray-500">Loading...</div>
-      </div>
+      return <LoadingState />;
     }
     
     switch (activeView) {

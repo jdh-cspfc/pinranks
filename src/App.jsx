@@ -7,6 +7,7 @@ import { signOut } from 'firebase/auth'
 import { auth } from './firebase'
 import ErrorBoundary from './components/ErrorBoundary'
 import { useErrorHandler } from './hooks/useErrorHandler'
+import LoadingState from './components/LoadingState'
 // import LoggingControls from './components/LoggingControls' // Logging controls - ready to re-enable
 
 export default function App() {
@@ -44,9 +45,7 @@ export default function App() {
     return (
       <ErrorBoundary onError={(error, errorInfo) => handleError(error, { action: 'app_error', metadata: { errorInfo } })}>
         <DarkModeProvider>
-          <div className="flex justify-center items-center h-screen">
-            <div className="text-gray-500">Loading...</div>
-          </div>
+          <LoadingState className="h-screen" />
         </DarkModeProvider>
       </ErrorBoundary>
     )

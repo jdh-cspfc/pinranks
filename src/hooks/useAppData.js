@@ -6,6 +6,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { StaticDataService, UserDataService, AuthService } from '../services/dataService';
 import { useErrorHandler } from './useErrorHandler';
+import { filterRankingsByBlockedMachines } from './useRankingFilter';
 import logger from '../utils/logger';
 
 /**
@@ -99,12 +100,7 @@ export const useAppData = () => {
         ]);
         
         // Filter rankings to exclude machines from blocked machine groups
-        // Rankings now use groupId directly (backward compatible with machineId during migration)
-        const filteredRankings = rankings.filter(ranking => {
-          const groupId = ranking.groupId || ranking.machineId?.split('-')[0];
-          if (!groupId) return false; // Skip invalid rankings
-          return !preferences.blockedMachines.some(blockedId => groupId.startsWith(blockedId));
-        });
+        const filteredRankings = filterRankingsByBlockedMachines(rankings, preferences.blockedMachines);
         
         logger.info('data', `Loaded user data for ${user.uid} - ${preferences.blockedMachines.length} blocked machines, ${rankings.length} rankings (${filteredRankings.length} after filtering)`);
         setUserPreferences(preferences);
@@ -152,12 +148,7 @@ export const useAppData = () => {
       
       // Also filter out the blocked machine from current rankings
       if (userRankings) {
-        const filteredRankings = userRankings.filter(ranking => {
-          // Rankings now use groupId directly (backward compatible with machineId during migration)
-          const rankingGroupId = ranking.groupId || ranking.machineId?.split('-')[0];
-          if (!rankingGroupId) return false; // Skip invalid rankings
-          return !rankingGroupId.startsWith(groupId);
-        });
+        const filteredRankings = filterRankingsByBlockedMachines(userRankings, newBlockedMachines);
         setUserRankings(filteredRankings);
         logger.info('data', `Filtered blocked machine ${groupId} from rankings`);
       }
@@ -199,12 +190,7 @@ export const useAppData = () => {
       const rankings = await UserDataService.getUserRankings(user.uid);
       
       // Filter rankings with the updated blocked machines list
-      // Rankings now use groupId directly (backward compatible with machineId during migration)
-      const filteredRankings = rankings.filter(ranking => {
-        const rankingGroupId = ranking.groupId || ranking.machineId?.split('-')[0];
-        if (!rankingGroupId) return false; // Skip invalid rankings
-        return !newBlockedMachines.some(blockedId => rankingGroupId.startsWith(blockedId));
-      });
+      const filteredRankings = filterRankingsByBlockedMachines(rankings, newBlockedMachines);
       
       setUserRankings(filteredRankings);
       logger.info('data', `Refreshed rankings after unblocking ${groupId}`);
@@ -264,12 +250,7 @@ export const useAppData = () => {
       ]);
       
       // Filter rankings to exclude machines from blocked machine groups
-      // Rankings now use groupId directly (backward compatible with machineId during migration)
-      const filteredRankings = rankings.filter(ranking => {
-        const groupId = ranking.groupId || ranking.machineId?.split('-')[0];
-        if (!groupId) return false; // Skip invalid rankings
-        return !preferences.blockedMachines.some(blockedId => groupId.startsWith(blockedId));
-      });
+      const filteredRankings = filterRankingsByBlockedMachines(rankings, preferences.blockedMachines);
       
       setUserPreferences(preferences);
       setUserRankings(filteredRankings);
