@@ -2,7 +2,6 @@ import React, { useState, useRef } from 'react';
 import { useDarkMode } from '../DarkModeContext';
 import { signOut, sendPasswordResetEmail } from 'firebase/auth';
 import { auth } from '../firebase';
-import { useBlockedMachines } from '../hooks/useBlockedMachines';
 import { useErrorHandler } from '../hooks/useErrorHandler';
 import { useConfirmationMessage } from '../hooks/useConfirmationMessage';
 import Card from './Card';
@@ -20,15 +19,13 @@ export default function Profile({ appData }) {
     groups, 
     isLoading, 
     isStaticDataLoading,
-    hasStaticData
-  } = appData;
-  const { 
-    blockedMachines, 
+    hasStaticData,
+    blockedMachines,
     addBlockedMachine,
     removeBlockedMachine,
-    clearAllBlockedMachines, 
-    isLoading: isUserDataLoading 
-  } = useBlockedMachines(appData);
+    clearAllBlockedMachines,
+    isUserDataLoading
+  } = appData;
   
   const [showAllMachines, setShowAllMachines] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');

@@ -4,7 +4,6 @@
  */
 
 import { useRef, useEffect } from 'react';
-import { useBlockedMachines } from './useBlockedMachines';
 import { useConfirmationMessage } from './useConfirmationMessage';
 import { useMachineReplacement } from './useMachineReplacement';
 import { UI_CONSTANTS } from '../constants/appConstants';
@@ -13,7 +12,7 @@ import logger from '../utils/logger';
 
 export const useMatchupActions = (appData, matchup, setMatchup, filter, fetchMatchup) => {
   const { handleError } = useErrorHandler('useMatchupActions');
-  const { addBlockedMachine, removeBlockedMachine, blockedMachines } = useBlockedMachines(appData);
+  const { addBlockedMachine, removeBlockedMachine, blockedMachines } = appData;
   const { message: confirmationMessage, showMessage, clearMessage, cleanup } = useConfirmationMessage();
   
   // Use the new machine replacement hook
